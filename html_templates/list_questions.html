@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <title>{{ title }}</title>
 </head>
+<style>
+    img {max-width: {{ image_width }}px; height: auto}
+    table, th, td {border: 1px solid black}
+</style>
 <body>
     <h2>{{ title }}</h2>
     <table>
@@ -14,13 +18,15 @@
         </tr>
         {% for row in rows %}
             <tr>
+                <td>{{ row.image_id }}</td>
+                <td>{{ row.question_id }}</td>
                 <td><img src="{{ row.image_url }}"></td>
                 <td>{{ row.question }}</td>
                 <td>
                     <ol>
-                    {% for choice in row.multiple_choices %}
+                    {% for choice in row.choices %}
                         <li>{{ choice }}</li>
-                    {% end for %}
+                    {% endfor %}
                     </ol>
                 </td>
                 <td>{{ row.answer }}</td>
