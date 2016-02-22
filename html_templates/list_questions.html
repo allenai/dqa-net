@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <h2>{{ title }}</h2>
+    <table>
+        <tr>
+            {% for header in headers %}
+                <th>{{ header }}</th>
+            {% endfor %}
+        </tr>
+        {% for row in rows %}
+            <tr>
+                <td><img src="{{ row.image_url }}"></td>
+                <td>{{ row.question }}</td>
+                <td>
+                    <ol>
+                    {% for choice in row.multiple_choices %}
+                        <li>{{ choice }}</li>
+                    {% end for %}
+                    </ol>
+                </td>
+                <td>{{ row.answer }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+
+</body>
+</html>
