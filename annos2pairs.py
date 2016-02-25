@@ -1,3 +1,9 @@
+"""
+pairs.json structure:
+{'text_pairs': {image_id: [[[x, y], [w1, w2, ... , wn]], ...],
+ 'max_sent_size': N,
+}
+"""
 import argparse
 import json
 import os
@@ -32,7 +38,7 @@ def annos2pairs(data_dir, map_xlen, map_ylen):
         anno_path = os.path.join(annos_dir, anno_name)
         anno = json.load(open(anno_path, "rb"))
         image_name, _ = os.path.splitext(anno_name)
-        image_id = int(os.path.splitext(image_name)[0])
+        image_id = os.path.splitext(image_name)[0]
         image_path = os.path.join(images_dir, image_name)
         image = Image.open(image_path, 'r')
         image_xlen, image_ylen = image.size
