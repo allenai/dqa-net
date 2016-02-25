@@ -11,11 +11,15 @@ from utils import tokenize
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("data_dir")
+    parser.add_argument("target_dir")
     parser.add_argument("--min_count", type=int, default=5)
     return parser.parse_args()
 
-def build_vocab(data_dir, min_count):
-    vocab_path = os.path.join(data_dir, "vocab.json")
+def build_vocab(args):
+    data_dir = args.data_dir
+    target_dir = args.target_dir
+    min_count = args.min_count
+    vocab_path = os.path.join(target_dir, "vocab.json")
     questions_dir = os.path.join(data_dir, "questions")
     annos_dir = os.path.join(data_dir, "annotations")
 
@@ -62,4 +66,4 @@ def build_vocab(data_dir, min_count):
 
 if __name__ == "__main__":
     ARGS = get_args()
-    build_vocab(ARGS.data_dir, ARGS.min_count)
+    build_vocab(ARGS)

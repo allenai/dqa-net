@@ -18,16 +18,21 @@ from utils import tokenize
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("data_dir")
+    parser.add_argument("target_dir")
     parser.add_argument("--map_xlen", default=16, type=int)
     parser.add_argument("--map_ylen", default=16, type=int)
     return parser.parse_args()
 
 
-def annos2pairs(data_dir, map_xlen, map_ylen):
-    vocab_path = os.path.join(data_dir, "vocab.json")
+def prepro_annos(args):
+    data_dir = args.data_dir
+    target_dir = args.target_dir
+    map_xlen = args.map_xlen
+    map_ylen = args.map_ylen
+    vocab_path = os.path.join(target_dir, "vocab.json")
     annos_dir = os.path.join(data_dir, "annotations")
     images_dir = os.path.join(data_dir, "images")
-    pairs_path = os.path.join(data_dir, "pairs.json")
+    pairs_path = os.path.join(target_dir, "pairs.json")
     vocab = json.load(open(vocab_path, "rb"))
     anno_names = os.listdir(annos_dir)
     out_dict = {'text_pairs': {}}
@@ -49,10 +54,10 @@ def annos2pairs(data_dir, map_xlen, map_ylen):
         pbar.update(i)
     pbar.finish()
     out_dict['max_sent_size'] = max_sent_size
+    print("max sent size: %d" % max_sent_size)
 
-    print("dumping json ...")
+    print("dumping json file ... ")
     json.dump(out_dict, open(pairs_path, "wb"))
-
 
 def _scale(x, y, ratio):
     return ratio * x, ratio * y
@@ -83,4 +88,4 @@ def _anno2pairs(vocab_dict, anno, image_xlen, image_ylen, map_xlen, map_ylen):
 
 if __name__ == "__main__":
     ARGS = get_args()
-    annos2pairs(ARGS.data_dir, ARGS.map_xlen, ARGS.map_ylen)
+    prepro_annos(ARGS)
