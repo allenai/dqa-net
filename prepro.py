@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+from pprint import pprint
 
 import progressbar as pb
 import sys
@@ -16,23 +17,37 @@ def get_args():
 
 
 def _get_text(vocab_dict, anno, key):
-    if key[0] != 'T':
-        return []
-    value = anno['text'][key]['value']
-    return vlup(vocab_dict, tokenize(value))
+    if key[0] == 'T':
+        value = anno['text'][key]['value']
+        return vlup(vocab_dict, tokenize(value))
+    elif key[0] == 'O':
+        if 'text' in anno['objects'][key]:
+            new_key = anno['objects'][key]['text'][0]
+            return _get_text(vocab_dict, anno, new_key)
+    return []
 
 
-def _get_rect(anno, key):
-    type_dict = {'T': 'text', 'A': 'arrows', 'B': 'blobs', 'H': 'arrowHeads'}
+def _get_poly(anno, key):
+    type_dict = {'T': 'text', 'A': 'arrows', 'B': 'blobs', 'H': 'arrowHeads', 'R': 'regions', 'O': 'objects'}
+    poly_dict = {'T': 'rectangle', 'A': 'polygon', 'B': 'polygon', 'H': 'rectangle', 'R': 'polygon'}
     type_ = type_dict[key[0]]
-    return anno[type_][key]['rectangle']
+    if type_ == 'objects':
+        if 'blobs' in anno[type_][key] and len(anno[type_][key]['blobs']) > 0:
+            new_key = anno[type_][key]['blobs'][0]
+        elif 'text' in anno[type_][key]:
+            new_key = anno[type_][key]['text'][0]
+        else:
+            raise Exception("%r" % anno)
+        return _get_poly(anno, new_key)
+    poly = poly_dict[key[0]]
+    return anno[type_][key][poly]
 
 
-def _get_head_rect(anno, arrow_key):
-    if anno['arrows'][arrow_key]['headless']:
+def _get_head_poly(anno, arrow_key):
+    if len(anno['arrows'][arrow_key]['arrowHeads']) == 0:
         return [0, 0, 0, 0]
-    head_key = anno['arrow'][arrow_key]['arrowHeads'][0]
-    return _get_rect(anno, head_key)
+    head_key = anno['arrows'][arrow_key]['arrowHeads'][0]
+    return _get_poly(anno, head_key)
 
 
 def _get_1hot_vector(dim, idx):
@@ -68,41 +83,56 @@ def prepro_annos(args):
                       ('intraObject', 'label', 'regionDescriptionNoArrow'): 1,
                       ('interObject', 'linkage', 'objectToObject'): 2,
                       # FIXME : None will cause error, but to see what is there!
-                      ('intraObject', 'linkage', None): 3}
+                      ('intraObject', 'linkage', 'regionDescription'): 3,
+                      ('intraObject', 'linkage', 'objectDescription'): 3,
+                      ('intraObject', 'textLinkage', 'textDescription'): 3}
 
     annos_dir = os.path.join(data_dir, "annotations")
     anno_names = os.listdir(annos_dir)
+    pbar = pb.ProgressBar(widgets=[pb.Percentage(), pb.Bar(), pb.ETA()], maxval=len(anno_names))
+    pbar.start()
     for i, anno_name in enumerate(anno_names):
         image_name = os.path.splitext(anno_name)[0]
         image_id = os.path.splitext(image_name)[0]
         anno_path = os.path.join(annos_dir, anno_name)
         anno = json.load(open(anno_path, "rb"))
         relations = []
+        if 'relationships' not in anno:
+            continue
         for rel_type, d in anno['relationships'].iteritems():
             for rel_subtype, dd in d.iteritems():
-                category = dd['category']
-                # FIXME : just choose one for now
-                arrow_key = dd['connector'][0]
-                origin_key = dd['origin'][0]
-                dest_key = dd['destination'][0]
-                arrow_rect = _get_rect(anno, arrow_key)
-                head_rect = _get_head_rect(anno, arrow_key)
-                origin_rect = _get_rect(anno, origin_key)
-                dest_rect = _get_rect(anno, dest_key)
-                idx = hot_index_dict[(rel_type, rel_subtype, category)]
-                # type_ = _get_1hot_vector(dim, idx)
-                type_ = idx
-                origin_text = _get_text(vocab, anno, origin_key)
-                dest_text = _get_text(vocab, anno, dest_key)
-                relation = dict(type=type_, r0=origin_rect, r1=dest_rect, rh=head_rect, ra=arrow_rect,
-                                t0=origin_text, t1=dest_text)
-                relations.append(relation)
+                if len(dd) == 0:
+                    continue
+                for rel_key, ddd in dd.iteritems():
+                    category = ddd['category']
+                    # FIXME : just choose one for now
+                    origin_key = ddd['origin'][0]
+                    dest_key = ddd['destination'][0]
+                    origin_rect = _get_poly(anno, origin_key)
+                    dest_rect = _get_poly(anno, dest_key)
+                    if 'connector' in ddd:
+                        arrow_key = ddd['connector'][0]
+                        arrow_rect = _get_poly(anno, arrow_key)
+                        head_rect = _get_head_poly(anno, arrow_key)
+                    else:
+                        arrow_rect = [0, 0, 0, 0]
+                        head_rect = [0, 0, 0, 0]
+                    idx = hot_index_dict[(rel_type, rel_subtype, category)]
+                    # type_ = _get_1hot_vector(dim, idx)
+                    type_ = idx
+                    origin_text = _get_text(vocab, anno, origin_key)
+                    dest_text = _get_text(vocab, anno, dest_key)
+                    relation = dict(type=type_, r0=origin_rect, r1=dest_rect, rh=head_rect, ra=arrow_rect,
+                                    t0=origin_text, t1=dest_text)
+                    relations.append(relation)
         # TODO : arrow relations as well?
         relations_dict[image_id] = relations
+        pbar.update(i)
+    pbar.finish()
 
-    sys.stdout.write("dumping json file ... ")
+    print("dumping json file ... ")
     json.dump(relations_dict, open(relations_path, 'wb'))
-    sys.stdout.write("done\n")
+    print("done")
 
 
 def prepro_questions(args):
@@ -144,3 +174,8 @@ def prepro_questions(args):
     sys.stdout.write("dumping json file ... ")
     json.dump(questions_dict, open(questions_path, "wb"))
     sys.stdout.write("done\n")
+
+if __name__ == "__main__":
+    ARGS = get_args()
+    # prepro_questions(ARGS)
+    prepro_annos(ARGS)
