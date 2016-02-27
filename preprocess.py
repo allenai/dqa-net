@@ -109,12 +109,14 @@ def prepro_annos(args):
     pbar = get_pbar(len(anno_names))
     pbar.start()
     for i, anno_name in enumerate(anno_names):
-        image_name = os.path.splitext(anno_name)[0]
-        image_id = os.path.splitext(image_name)[0]
+        image_name, _ = os.path.splitext(anno_name)
+        image_id, _ = os.path.splitext(image_name)
         anno_path = os.path.join(annos_dir, anno_name)
         anno = json.load(open(anno_path, "rb"))
         relations = []
         if 'relationships' not in anno:
+            relations_dict[image_id] = relations
+            pbar.update(i)
             continue
         for rel_type, d in anno['relationships'].iteritems():
             for rel_subtype, dd in d.iteritems():
@@ -157,11 +159,15 @@ def prepro_questions(args):
     data_dir = args.data_dir
     target_dir = args.target_dir
     questions_dir = os.path.join(data_dir, "questions")
+    images_dir = os.path.join(data_dir, "images")
+    annos_dir = os.path.join(data_dir, "annotations")
     sents_path = os.path.join(target_dir, "sents.json")
     answer_path = os.path.join(target_dir, "answers.json")
     id_map_path = os.path.join(target_dir, "id_map.json")
     vocab_path = os.path.join(target_dir, "vocab.json")
+    meta_data_path = os.path.join(target_dir, "meta_data.json")
     vocab = json.load(open(vocab_path, "rb"))
+    meta_data = json.load(open(meta_data_path, "rb"))
 
     sents_dict = {}
     answer_dict = {}
@@ -179,6 +185,10 @@ def prepro_questions(args):
             continue
         image_id, _ = os.path.splitext(image_name)
         ques_path = os.path.join(questions_dir, ques_name)
+        anno_path = os.path.join(annos_dir, ques_name)
+        image_path = os.path.join(images_dir, image_name)
+        assert os.path.exists(anno_path), "%s does not exist."
+        assert os.path.exists(image_path), "%s does not exist."
         ques = json.load(open(ques_path, "rb"))
         for ques_text, d in ques['questions'].iteritems():
             ques_words = _tokenize(ques_text)
@@ -192,7 +202,7 @@ def prepro_questions(args):
             max_sent_size = max(max_sent_size, max(len(sent) for sent in sents))
         pbar.update(i)
     pbar.finish()
-    sents_dict['max_sent_size'] = max_sent_size
+    meta_data['max_sent_size'] = max_sent_size
 
     print("number of questions: %d" % len(sents_dict))
     print("max sent size: %d" % max_sent_size)
@@ -200,6 +210,7 @@ def prepro_questions(args):
     json.dump(sents_dict, open(sents_path, "wb"))
     json.dump(answer_dict, open(answer_path, "wb"))
     json.dump(id_map, open(id_map_path, "wb"))
+    json.dump(meta_data, open(meta_data_path, "wb"))
     print("done")
 
 
@@ -250,11 +261,20 @@ def build_vocab(args):
     vocab_dict = {word: idx+1 for idx, word in enumerate(sorted(vocab_list))}
     vocab_dict['UNK'] = 0
     print("vocab size: %d" % len(vocab_dict))
+    print ("dumping json file ... ")
     json.dump(vocab_dict, open(vocab_path, "wb"))
+    print ("done")
+
+def create_meta_data(args):
+    target_dir = args.target_dir
+    meta_data_path = os.path.join(target_dir, "meta_data.json")
+    meta_data = {}
+    json.dump(meta_data, open(meta_data_path, "wb"))
 
 
 if __name__ == "__main__":
     ARGS = get_args()
+    create_meta_data(ARGS)
     build_vocab(ARGS)
     prepro_questions(ARGS)
     prepro_annos(ARGS)
