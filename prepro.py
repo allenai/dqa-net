@@ -5,6 +5,7 @@ from pprint import pprint
 
 import progressbar as pb
 import sys
+import numpy as np
 
 from utils import tokenize, vlup
 
@@ -27,7 +28,7 @@ def _get_text(vocab_dict, anno, key):
     return []
 
 
-def _get_poly(anno, key):
+def _get_center(anno, key):
     type_dict = {'T': 'text', 'A': 'arrows', 'B': 'blobs', 'H': 'arrowHeads', 'R': 'regions', 'O': 'objects'}
     poly_dict = {'T': 'rectangle', 'A': 'polygon', 'B': 'polygon', 'H': 'rectangle', 'R': 'polygon'}
     type_ = type_dict[key[0]]
@@ -38,16 +39,18 @@ def _get_poly(anno, key):
             new_key = anno[type_][key]['text'][0]
         else:
             raise Exception("%r" % anno)
-        return _get_poly(anno, new_key)
-    poly = poly_dict[key[0]]
-    return anno[type_][key][poly]
+        return _get_center(anno, new_key)
+    shape = poly_dict[key[0]]
+    poly = np.array(anno[type_][key][shape])
+    center = map(int, map(round, np.mean(poly, 0)))
+    return center
 
 
-def _get_head_poly(anno, arrow_key):
+def _get_head_center(anno, arrow_key):
     if len(anno['arrows'][arrow_key]['arrowHeads']) == 0:
-        return [0, 0, 0, 0]
+        return [0, 0]
     head_key = anno['arrows'][arrow_key]['arrowHeads'][0]
-    return _get_poly(anno, head_key)
+    return _get_center(anno, head_key)
 
 
 def _get_1hot_vector(dim, idx):
@@ -82,7 +85,6 @@ def prepro_annos(args):
     hot_index_dict = {('intraObject', 'label', 'objectDescription'): 0,
                       ('intraObject', 'label', 'regionDescriptionNoArrow'): 1,
                       ('interObject', 'linkage', 'objectToObject'): 2,
-                      # FIXME : None will cause error, but to see what is there!
                       ('intraObject', 'linkage', 'regionDescription'): 3,
                       ('intraObject', 'linkage', 'objectDescription'): 3,
                       ('intraObject', 'textLinkage', 'textDescription'): 3}
@@ -108,21 +110,21 @@ def prepro_annos(args):
                     # FIXME : just choose one for now
                     origin_key = ddd['origin'][0]
                     dest_key = ddd['destination'][0]
-                    origin_rect = _get_poly(anno, origin_key)
-                    dest_rect = _get_poly(anno, dest_key)
+                    origin_center = _get_center(anno, origin_key)
+                    dest_center = _get_center(anno, dest_key)
                     if 'connector' in ddd:
                         arrow_key = ddd['connector'][0]
-                        arrow_rect = _get_poly(anno, arrow_key)
-                        head_rect = _get_head_poly(anno, arrow_key)
+                        arrow_center = _get_center(anno, arrow_key)
+                        head_center = _get_head_center(anno, arrow_key)
                     else:
-                        arrow_rect = [0, 0, 0, 0]
-                        head_rect = [0, 0, 0, 0]
+                        arrow_center = [0, 0]
+                        head_center = [0, 0]
                     idx = hot_index_dict[(rel_type, rel_subtype, category)]
                     # type_ = _get_1hot_vector(dim, idx)
                     type_ = idx
                     origin_text = _get_text(vocab, anno, origin_key)
                     dest_text = _get_text(vocab, anno, dest_key)
-                    relation = dict(type=type_, r0=origin_rect, r1=dest_rect, rh=head_rect, ra=arrow_rect,
+                    relation = dict(type=type_, r0=origin_center, r1=dest_center, rh=head_center, ra=arrow_center,
                                     t0=origin_text, t1=dest_text)
                     relations.append(relation)
         # TODO : arrow relations as well?
