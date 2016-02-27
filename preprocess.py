@@ -77,7 +77,7 @@ def _get_1hot_vector(dim, idx):
 def prepro_annos(args):
     """
     for each annotation file,
-    [{'type': one-hot-in-4-vector,
+    [{'type': type_num,
       'r0': rect,
       'r1': rect,
       'rh': rect,
@@ -85,7 +85,7 @@ def prepro_annos(args):
       't0': indexed_words,
       't1': indexed_words}]
 
-    one-hot-in-4-vector: [intraLabel, intraRegionLabel, interLinkage, intraLinkage,] (arrowDescriptor, arrowHeadTail)
+    type_num: [intraLabel, intraRegionLabel, interLinkage, intraLinkage,] (arrowDescriptor, arrowHeadTail)
     :param args:
     :return:
     """
@@ -147,6 +147,7 @@ def prepro_annos(args):
         pbar.update(i)
     pbar.finish()
 
+    print("number of relations: %d" % sum(len(relations) for relations in relations_dict))
     print("dumping json file ... ")
     json.dump(relations_dict, open(relations_path, 'wb'))
     print("done")
@@ -156,12 +157,15 @@ def prepro_questions(args):
     data_dir = args.data_dir
     target_dir = args.target_dir
     questions_dir = os.path.join(data_dir, "questions")
-    questions_path = os.path.join(target_dir, "questions.json")
+    sents_path = os.path.join(target_dir, "sents.json")
+    answer_path = os.path.join(target_dir, "answers.json")
+    id_map_path = os.path.join(target_dir, "id_map.json")
     vocab_path = os.path.join(target_dir, "vocab.json")
     vocab = json.load(open(vocab_path, "rb"))
 
-    questions_dict = {'sents': {},
-                      'answers': {}}
+    sents_dict = {}
+    answer_dict = {}
+    id_map = {}
 
     ques_names = os.listdir(questions_dir)
     question_id = 0
@@ -169,9 +173,11 @@ def prepro_questions(args):
     pbar = get_pbar(len(ques_names))
     pbar.start()
     for i, ques_name in enumerate(ques_names):
-        if os.path.splitext(ques_name)[1] != ".json":
+        image_name, ext = os.path.splitext(ques_name)
+        if ext != ".json":
             pbar.update(i)
             continue
+        image_id, _ = os.path.splitext(image_name)
         ques_path = os.path.join(questions_dir, ques_name)
         ques = json.load(open(ques_path, "rb"))
         for ques_text, d in ques['questions'].iteritems():
@@ -179,17 +185,21 @@ def prepro_questions(args):
             choice_wordss = [_tokenize(choice) for choice in d['answerTexts']]
             sents = [_vlup(vocab, ques_words + choice_words) for choice_words in choice_wordss]
             # TODO : one hot vector or index?
-            questions_dict['answers'][str(question_id)] = d['correctAnswer']
+            sents_dict[str(question_id)] = sents
+            answer_dict[str(question_id)] = d['correctAnswer']
+            id_map[str(question_id)] = image_id
             question_id += 1
             max_sent_size = max(max_sent_size, max(len(sent) for sent in sents))
         pbar.update(i)
     pbar.finish()
-    questions_dict['max_sent_size'] = max_sent_size
+    sents_dict['max_sent_size'] = max_sent_size
 
-    print("number of questions: %d" % len(questions_dict['answers']))
+    print("number of questions: %d" % len(sents_dict))
     print("max sent size: %d" % max_sent_size)
     print("dumping json file ... ")
-    json.dump(questions_dict, open(questions_path, "wb"))
+    json.dump(sents_dict, open(sents_path, "wb"))
+    json.dump(answer_dict, open(answer_path, "wb"))
+    json.dump(id_map, open(id_map_path, "wb"))
     print("done")
 
 
