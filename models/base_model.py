@@ -27,9 +27,11 @@ class BaseModel(object):
             self.saver = tf.train.Saver()
 
     def _build_tower(self):
+        # TODO : Implement this! Either here or by creating a child class.
         raise Exception("Implement this!")
 
     def _get_feed_dict(self, batch):
+        # TODO : Implement this!
         raise Exception("Implement this!")
 
     def train_batch(self, sess, learning_rate, batch):
@@ -81,7 +83,11 @@ class BaseModel(object):
 
     def eval(self, sess, eval_data_set, is_val=False):
         params = self.params
-        num_batches = params.val_num_batches if is_val else params.test_num_batches
+        if is_val:
+            eval_data_set.reset()
+            num_batches = params.val_num_batches
+        else:
+            num_batches = params.test_num_batches
         num_corrects, total = 0, 0
         string = "%s:N=%d|" % (eval_data_set.name, eval_data_set.batch_size * num_batches)
         pbar = pb.ProgressBar(widgets=[string, pb.Percentage(), pb.Bar(), pb.ETA()], maxval=num_batches)
@@ -95,7 +101,6 @@ class BaseModel(object):
             losses.append(cur_loss)
             pbar.update(num_batches_completed)
         pbar.finish()
-        eval_data_set.reset()
         loss = np.mean(losses)
 
         print("at %d: acc = %.2f%% = %d / %d, loss = %.4f" %
