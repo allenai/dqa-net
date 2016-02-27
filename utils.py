@@ -1,14 +1,7 @@
-import re
+import progressbar as pb
 
 
-def tokenize(raw):
-    tokens = re.findall(r"[\w]+", raw)
-    tokens = [token.lower() for token in tokens]
-    return tokens
-
-
-def vget(vocab_dict, word):
-    return vocab_dict[word] if word in vocab_dict else 0
-
-def vlup(vocab_dict, words):
-    return [vget(vocab_dict, word) for word in words]
+def get_pbar(num, prefix=""):
+    assert isinstance(prefix, str)
+    pbar = pb.ProgressBar(widgets=[prefix, pb.Percentage(), pb.Bar(), pb.ETA()], maxval=num)
+    return pbar
