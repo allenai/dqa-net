@@ -94,6 +94,10 @@ def prepro_annos(args):
     vocab_path = os.path.join(target_dir, "vocab.json")
     vocab = json.load(open(vocab_path, "rb"))
     relations_path = os.path.join(target_dir, "relations.json")
+    meta_data_path = os.path.join(target_dir, "meta_data.json")
+    meta_data = json.load(open(meta_data_path, "rb"))
+
+    meta_data['pred_size'] = 2 * 4
 
     relations_dict = {}
     dim = 4
@@ -141,8 +145,10 @@ def prepro_annos(args):
                     type_ = idx
                     origin_text = _get_text(vocab, anno, origin_key)
                     dest_text = _get_text(vocab, anno, dest_key)
-                    relation = dict(type=type_, r0=origin_center, r1=dest_center, rh=head_center, ra=arrow_center,
-                                    t0=origin_text, t1=dest_text)
+                    # relation = dict(type=type_, l0=origin_center, l1=dest_center, lh=head_center, la=arrow_center, t0=origin_text, t1=dest_text)
+                    pred = origin_center + dest_center + head_center + arrow_center
+                    assert len(pred) == meta_data['pred_size'], "Wrong predicate size: %d" % len(pred)
+                    relation = dict(a1=origin_text, pred=pred, a2=dest_text)
                     relations.append(relation)
         # TODO : arrow relations as well?
         relations_dict[image_id] = relations
