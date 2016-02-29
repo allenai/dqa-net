@@ -127,7 +127,8 @@ class Layer(object):
             r_aug = tf.expand_dims(r, 1)  # [N, 1, R, d]
             c_aug = tf.expand_dims(c, 1)  # [N, 1, R, d]
             u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
-            ur = tf.reduce_sum(u_aug * r_aug, 3, name='ur')  # [N, C, R]
+            u_tiled = tf.tile(u_aug, [1, 1, R, 1])
+            ur = tf.reduce_sum(u_tiled * r_aug, 3, name='ur')  # [N, C, R]
             rel_mask_aug = tf.expand_dims(memory.rel_mask, 1)  # [N, 1, R]
             if linear_start:
                 p = tf.reduce_sum(tf.mul(ur, rel_mask_aug, name='p'), 3)  # [N, C, R]
@@ -135,7 +136,8 @@ class Layer(object):
                 p = nn.softmax_with_mask([N, C, R], ur, rel_mask_aug)  # [N, C, R]
 
         with tf.name_scope('o'):
-            o = tf.reduce_sum(c_aug * tf.expand_dims(p, -1), 2)  # [N, C, d]
+            c_tiled = tf.tile(c_aug, [1, C, 1, 1])
+            o = tf.reduce_sum(c_tiled * tf.expand_dims(p, -1), 2)  # [N, C, d]
 
         self.u = u
         self.o = o
