@@ -111,6 +111,7 @@ def prepro_annos(args):
     annos_dir = os.path.join(data_dir, "annotations")
     anno_names = os.listdir(annos_dir)
     max_label_size = 0
+    max_num_rels = 0
     pbar = get_pbar(len(anno_names))
     pbar.start()
     for i, anno_name in enumerate(anno_names):
@@ -154,12 +155,15 @@ def prepro_annos(args):
                     relations.append(relation)
         # TODO : arrow relations as well?
         relations_dict[image_id] = relations
+        max_num_rels = max(max_num_rels, len(relations))
         pbar.update(i)
     pbar.finish()
     meta_data['max_label_size'] = max_label_size
+    meta_data['max_num_rels'] = max_num_rels
 
     print("number of relations: %d" % sum(len(relations) for relations in relations_dict))
     print('max label size: %d' % max_label_size)
+    print("max num rels: %d" % max_num_rels)
     print("dumping json file ... ")
     json.dump(relations_dict, open(relations_path, 'wb'))
     json.dump(meta_data, open(meta_data_path, 'wb'))
@@ -198,6 +202,7 @@ def prepro_questions(args):
         ques_path = os.path.join(questions_dir, ques_name)
         anno_path = os.path.join(annos_dir, ques_name)
         image_path = os.path.join(images_dir, image_name)
+        num_choices = 0
         assert os.path.exists(anno_path), "%s does not exist."
         assert os.path.exists(image_path), "%s does not exist."
         ques = json.load(open(ques_path, "rb"))
@@ -205,6 +210,8 @@ def prepro_questions(args):
             ques_words = _tokenize(ques_text)
             choice_wordss = [_tokenize(choice) for choice in d['answerTexts']]
             sents = [_vlup(vocab, ques_words + choice_words) for choice_words in choice_wordss]
+            assert not num_choices or num_choices == len(sents), "number of choices don't match: %s" % ques_name
+            num_choices = len(sents)
             # TODO : one hot vector or index?
             sents_dict[str(question_id)] = sents
             answer_dict[str(question_id)] = d['correctAnswer']
@@ -214,8 +221,10 @@ def prepro_questions(args):
         pbar.update(i)
     pbar.finish()
     meta_data['max_sent_size'] = max_sent_size
+    meta_data['num_choices'] = num_choices
 
     print("number of questions: %d" % len(sents_dict))
+    print("number of choices: %d" % num_choices)
     print("max sent size: %d" % max_sent_size)
     print("dumping json file ... ")
     json.dump(sents_dict, open(sents_path, "wb"))

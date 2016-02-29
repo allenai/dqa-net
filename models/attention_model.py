@@ -14,7 +14,7 @@ class Sentence(object):
         self.x_mask = tf.placeholder('float', shape, name="%s_mask" % name)
         self.x_mask_aug = tf.expand_dims(self.x_mask, -1, name='%s_mask_aug' % name)
 
-    def add(self, feed_dict, x, x_len, x_mask):
+    def add(self, feed_dict, x, x_mask, x_len):
         feed_dict[self.x] = x
         feed_dict[self.x_len] = x_len
         feed_dict[self.x_mask] = x_mask
@@ -38,7 +38,7 @@ class Memory(object):
 
 
 class SentenceEncoder(object):
-    def __init__(self, V, J, d, encoder=None):
+    def __init__(self, V, J, d, sent_encoder=None):
 
         def f(JJ, jj, dd, kk):
             return (1-float(jj)/JJ) - (float(kk)/dd)*(1-2.0*jj/JJ)
@@ -47,7 +47,7 @@ class SentenceEncoder(object):
             return [f(J, jj, d, k) for k in range(d)]
 
         _l = [g(j) for j in range(J)]
-        self.A = tf.identity(encoder.A, 'A') if encoder else tf.get_variable('A', shape=[V, d])
+        self.A = tf.identity(sent_encoder.A, 'A') if sent_encoder else tf.get_variable('A', shape=[V, d])
         self.l = tf.constant(_l, shape=[J, d], name='l')
 
     def __call__(self, sentence, name='u'):
@@ -55,7 +55,7 @@ class SentenceEncoder(object):
         Ax = tf.nn.embedding_lookup(self.A, sentence.x)
         lAx = self.l * Ax
         lAx_masked = lAx * tf.expand_dims(sentence.x_mask, -1)
-        m = tf.reduce_sum(lAx_masked, len(sentence.shape) - 2, name=name)
+        m = tf.reduce_sum(lAx_masked, len(sentence.shape) - 1, name=name)
         return m
 
 
@@ -64,7 +64,7 @@ class RelationEncoder(object):
         self.params = params
         V, K, P, d = params.vocab_size, params.max_label_size, params.pred_size, params.hidden_size
         self.G = tf.identity(rel_encoder.G, name='G') if rel_encoder else tf.get_variable('G', dtype='float', shape=[P, d])
-        self.sent_encoder = rel_encoder.sent_encoder if rel_encoder else sent_encoder or SentenceEncoder(V, K, d)
+        self.sent_encoder = rel_encoder.sent_encoder if rel_encoder else SentenceEncoder(V, K, d, sent_encoder=sent_encoder)
 
         J = 3
 
@@ -98,6 +98,7 @@ class RelationEncoder(object):
         p_aug = tf.expand_dims(p, 2)
         v1_aug = tf.expand_dims(v1, 2)
         v2_aug = tf.expand_dims(v2, 2)
+        print p_aug.get_shape(), v1_aug.get_shape(), v2_aug.get_shape()
         rel = tf.concat(2, [p_aug, v1_aug, v2_aug], name='rel')  # [N, R, 3, d]
         r = self._ground_rel(rel, name='r')  # [N, R, d]
         return r
@@ -110,26 +111,28 @@ class Layer(object):
         N, C, R, d = params.batch_size, params.num_choices, params.max_num_rels, params.hidden_size
         linear_start = params.linear_start
 
-        if sent_encoder:
-            input_encoder = RelationEncoder(params, sent_encoder=sent_encoder)
-        else:
-            input_encoder = RelationEncoder(params, rel_encoder=prev_layer.output_encoder)
-        output_encoder = RelationEncoder(params)
+        with tf.variable_scope("input"):
+            if sent_encoder:
+                input_encoder = RelationEncoder(params, sent_encoder=sent_encoder)
+            else:
+                input_encoder = RelationEncoder(params, rel_encoder=prev_layer.output_encoder)
+        with tf.variable_scope("output"):
+            output_encoder = RelationEncoder(params)
 
         r = input_encoder(memory)  # [N, R, d]
         c = output_encoder(memory)  # [N, R, d]
-        u = tf.identity(u or prev_layer.u + prev_layer.o, "u")  # [N, C, d]
+        u = tf.identity(u or prev_layer.u + prev_layer.o, name="u")  # [N, C, d]
 
         with tf.name_scope('p'):
             r_aug = tf.expand_dims(r, 1)  # [N, 1, R, d]
             c_aug = tf.expand_dims(c, 1)  # [N, 1, R, d]
             u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
-            ur = u_aug * r_aug  # [N, C, R, d]
-            rel_mask_aug = tf.expand_dims(tf.expand_dims(memory.rel_mask, 1), -1)  # [N, 1, R, 1]
+            ur = tf.reduce_sum(u_aug * r_aug, 3, name='ur')  # [N, C, R]
+            rel_mask_aug = tf.expand_dims(memory.rel_mask, 1)  # [N, 1, R]
             if linear_start:
                 p = tf.reduce_sum(tf.mul(ur, rel_mask_aug, name='p'), 3)  # [N, C, R]
             else:
-                p = nn.softmax_with_mask([N, C, R, d], ur, rel_mask_aug)  # [N, C, R]
+                p = nn.softmax_with_mask([N, C, R], ur, rel_mask_aug)  # [N, C, R]
 
         with tf.name_scope('o'):
             o = tf.reduce_sum(c_aug * tf.expand_dims(p, -1), 2)  # [N, C, d]
@@ -139,16 +142,6 @@ class Layer(object):
 
 
 class AttentionModel(BaseModel):
-    def _get_l(self, J, name="l"):
-        d = self.params.hidden_size
-        def f(JJ, jj, dd, kk):
-            return (1-float(jj)/JJ) - (float(kk)/dd)*(1-2.0*jj/JJ)
-        def g(jj):
-            return [f(J, jj, d, k) for k in range(d)]
-        l = [g(j) for j in range(J)]
-        l_tensor = tf.constant(l, shape=[J, d], name=name)
-        return l_tensor
-
     def _build_tower(self):
         params = self.params
         V, d = params.vocab_size, params.hidden_size
@@ -164,9 +157,8 @@ class AttentionModel(BaseModel):
             self.m = Memory(params)
             self.y = tf.placeholder('int8', [N, C], name='y')
 
-        with tf.name_scope('first_u'):
-            B = tf.get_variable('B', dtype='float', shape=[V, d])
-            sent_encoder = SentenceEncoder(B, J, d)
+        with tf.variable_scope('first_u'):
+            sent_encoder = SentenceEncoder(V, J, d)
             first_u = sent_encoder(self.s, 'first_u')
 
         layers = []
@@ -192,7 +184,7 @@ class AttentionModel(BaseModel):
             self.yp = tf.nn.softmax(self.logit, name='yp')
 
         with tf.name_scope('loss') as loss_scope:
-            self.cross_entropy = tf.nn.softmax_cross_entropy_with_logits(self.logit, self.y, name='cross_entropy')
+            self.cross_entropy = tf.nn.softmax_cross_entropy_with_logits(self.logit, tf.cast(self.y, 'float'), name='cross_entropy')
             self.avg_cross_entropy = tf.reduce_mean(self.cross_entropy, 0, name='avg_cross_entropy')
             tf.add_to_collection('losses', self.avg_cross_entropy)
             self.total_loss = tf.add_n(tf.get_collection('losses'), name='total_loss')
@@ -245,7 +237,7 @@ class AttentionModel(BaseModel):
 
     def _prepro_relations_batch(self, relations_batch):
         p = self.params
-        N, R, K, P = p.batch_size, p.max_num_relations, p.max_label_size, p.pred_size
+        N, R, K, P = p.batch_size, p.max_num_rels, p.max_label_size, p.pred_size
         rel_mask_batch = np.zeros([N, R], dtype='float')
         num_rels_batch = np.zeros([N], dtype='int16')
         pred_batch = np.zeros([N, R, P], dtype='float')

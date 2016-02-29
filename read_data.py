@@ -42,7 +42,7 @@ class DataSet(object):
         np.random.shuffle(self.idxs)
 
 
-def read_data(params, data_dir, name):
+def read_data(name, params, data_dir):
     sents_path = os.path.join(data_dir, "sents.json")
     relations_path = os.path.join(data_dir, "relations.json")
     answers_path = os.path.join(data_dir, "answers.json")
