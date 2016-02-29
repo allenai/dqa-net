@@ -110,6 +110,7 @@ def prepro_annos(args):
 
     annos_dir = os.path.join(data_dir, "annotations")
     anno_names = os.listdir(annos_dir)
+    max_label_size = 0
     pbar = get_pbar(len(anno_names))
     pbar.start()
     for i, anno_name in enumerate(anno_names):
@@ -145,6 +146,7 @@ def prepro_annos(args):
                     type_ = idx
                     origin_text = _get_text(vocab, anno, origin_key)
                     dest_text = _get_text(vocab, anno, dest_key)
+                    max_label_size = max(max_label_size, len(origin_text), len(dest_text))
                     # relation = dict(type=type_, l0=origin_center, l1=dest_center, lh=head_center, la=arrow_center, t0=origin_text, t1=dest_text)
                     pred = origin_center + dest_center + head_center + arrow_center
                     assert len(pred) == meta_data['pred_size'], "Wrong predicate size: %d" % len(pred)
@@ -154,10 +156,13 @@ def prepro_annos(args):
         relations_dict[image_id] = relations
         pbar.update(i)
     pbar.finish()
+    meta_data['max_label_size'] = max_label_size
 
     print("number of relations: %d" % sum(len(relations) for relations in relations_dict))
+    print('max label size: %d' % max_label_size)
     print("dumping json file ... ")
     json.dump(relations_dict, open(relations_path, 'wb'))
+    json.dump(meta_data, open(meta_data_path, 'wb'))
     print("done")
 
 

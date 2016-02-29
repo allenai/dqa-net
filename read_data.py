@@ -53,9 +53,7 @@ def read_data(params, data_dir, name):
     sents_dict = json.load(open(sents_path, "rb"))
     relations_dict = json.load(open(relations_path, "rb"))
     answer_dict = json.load(open(answers_path, "rb"))
-    vocab = json.load(open(vocab_path, "rb"))
     id_map = json.load(open(id_map_path, "rb"))
-    meta_data = json.load(open(meta_data_path, "rb"))
 
     batch_size = params.batch_size
     question_ids = sorted(sents_dict.keys())
