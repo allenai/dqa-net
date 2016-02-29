@@ -4,6 +4,7 @@ import numpy as np
 import nn
 from models.base_model import BaseModel
 
+VERY_SMALL_NUMBER = -1e10
 
 class Sentence(object):
     def __init__(self, shape, name='sentence'):
@@ -98,7 +99,6 @@ class RelationEncoder(object):
         p_aug = tf.expand_dims(p, 2)
         v1_aug = tf.expand_dims(v1, 2)
         v2_aug = tf.expand_dims(v2, 2)
-        print p_aug.get_shape(), v1_aug.get_shape(), v2_aug.get_shape()
         rel = tf.concat(2, [p_aug, v1_aug, v2_aug], name='rel')  # [N, R, 3, d]
         r = self._ground_rel(rel, name='r')  # [N, R, d]
         return r
@@ -139,6 +139,9 @@ class Layer(object):
             c_tiled = tf.tile(c_aug, [1, C, 1, 1])
             o = tf.reduce_sum(c_tiled * tf.expand_dims(p, -1), 2)  # [N, C, d]
 
+        self.r = r
+        self.c = c
+        self.p = p
         self.u = u
         self.o = o
 
@@ -205,6 +208,12 @@ class AttentionModel(BaseModel):
             self.opt_op = opt.apply_gradients(clipped_grads_and_vars, global_step=self.global_step)
 
         # summaries
+        summaries.append(tf.histogram_summary(first_u.op.name, first_u))
+        summaries.append(tf.histogram_summary(last_layer.r.op.name, last_layer.r))
+        summaries.append(tf.histogram_summary(last_layer.c.op.name, last_layer.c))
+        summaries.append(tf.histogram_summary(last_layer.u.op.name, last_layer.u))
+        summaries.append(tf.histogram_summary(last_layer.o.op.name, last_layer.o))
+        summaries.append(tf.histogram_summary(last_u.op.name, last_u))
         summaries.append(tf.scalar_summary("%s (raw)" % self.total_loss.op.name, self.total_loss))
         self.merged_summary = tf.merge_summary(summaries)
 

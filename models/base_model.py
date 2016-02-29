@@ -83,8 +83,8 @@ class BaseModel(object):
 
     def eval(self, sess, eval_data_set, is_val=False):
         params = self.params
+        eval_data_set.reset()
         if is_val:
-            eval_data_set.reset()
             num_batches = params.val_num_batches
         else:
             num_batches = params.test_num_batches
