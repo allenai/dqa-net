@@ -287,6 +287,8 @@ def build_vocab(args):
 
 def create_meta_data(args):
     target_dir = args.target_dir
+    if not os.path.exists(target_dir):
+        os.mkdir(target_dir)
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     meta_data = {}
     json.dump(meta_data, open(meta_data_path, "wb"))
