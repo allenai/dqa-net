@@ -21,7 +21,10 @@
                 <td>{{ row.image_id }}</td>
                 <td>{{ row.question_id }}</td>
                 <td>
-                    <img src="{{ row.image_url }}">
+                    {% if show_im == 'True' %}
+                        <img src="{{ row.image_url }}">
+                        {{ show_im }}
+                    {% endif %}
                 </td>
                 <td>{{ row.question }}</td>
                 <td>
@@ -32,6 +35,7 @@
                     </ol>
                 </td>
                 <td>{{ row.answer }}</td>
+                <td><a href="{{ row.anno_url }}">Open</a> </td>
             </tr>
         {% endfor %}
     </table>

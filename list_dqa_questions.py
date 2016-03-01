@@ -12,11 +12,11 @@ def get_args():
     parser.add_argument("data_dir")
     parser.add_argument("--start", default=0, type=int)
     parser.add_argument("--stop", default=1500, type=int)
-    parser.add_argument("--im", default=True, type=bool)
+    parser.add_argument("--show_im", default='True')
     parser.add_argument("--im_width", type=int, default=200)
     parser.add_argument("--ext", type=str, default=".png")
     parser.add_argument("--html_path", type=str, default="/tmp/list_questions.html")
-    parser.add_argument("--template_name", type=str, default="list_questions.html")
+    parser.add_argument("--template_name", type=str, default="list_dqa_questions.html")
 
     return parser.parse_args()
 
@@ -28,16 +28,16 @@ def list_dqa_questions(args):
     annos_dir = os.path.join(data_dir, "annotations")
     html_path = args.html_path
 
-    headers = ['image_id', 'question_id', 'image', 'question', 'choices', 'answer']
+    headers = ['image_id', 'question_id', 'image', 'question', 'choices', 'answer', 'annotations']
     rows = []
     image_names = os.listdir(images_dir)
     image_names = sorted(image_names, key=lambda name: int(os.path.splitext(name)[0]))
-    image_names = [name for name in image_names if args.start <= int(os.path.splitext(name)[0]) < args.stop]
+    image_names = [name for name in image_names
+                   if name.endswith(args.ext) and args.start <= int(os.path.splitext(name)[0]) < args.stop]
     pbar = get_pbar(len(image_names)).start()
     for i, image_name in enumerate(image_names):
-        if not image_name.endswith(args.ext):
-            continue
         image_id, _ = os.path.splitext(image_name)
+        image_path = os.path.join(images_dir, image_name)
         json_name = "%s.json" % image_name
         question_path = os.path.join(questions_dir, json_name)
         anno_path = os.path.join(annos_dir, json_name)
@@ -48,7 +48,8 @@ def list_dqa_questions(args):
         for j, (question, d) in enumerate(question_dict['questions'].iteritems()):
             row = {'image_id': image_id,
                    'question_id': str(j),
-                   'image_url': os.path.join(images_dir, image_name),
+                   'image_url': image_path,
+                   'anno_url': anno_path,
                    'question': question,
                    'choices': d['answerTexts'],
                    'answer': d['correctAnswer']}
@@ -58,8 +59,8 @@ def list_dqa_questions(args):
     var_dict = {'title': "Question List: %d - %d" % (args.start, args.stop - 1),
                 'image_width': args.im_width,
                 'headers': headers,
-                'rows': rows[args.start:args.stop],
-                'show_im': args.im}
+                'rows': rows,
+                'show_im': args.show_im}
 
     env = Environment(loader=FileSystemLoader('html_templates'))
     template = env.get_template(args.template_name)
