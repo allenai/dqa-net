@@ -30,7 +30,7 @@ class DataSet(object):
 
     def has_next_batch(self):
         if self.include_leftover:
-            return self.idx_in_epoch + 1 < self.num_examples
+            return self.idx_in_epoch < self.num_examples
         return self.idx_in_epoch + self.batch_size <= self.num_examples
 
     def complete_epoch(self):

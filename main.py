@@ -31,7 +31,7 @@ flags.DEFINE_float("max_grad_norm", 40, "Max grad norm; above this number is cli
 
 # Training and testing options
 flags.DEFINE_boolean("train", False, "Train? Test if False [False]")
-flags.DEFINE_integer("val_num_batches", 10, "Val num batches [10]")
+flags.DEFINE_integer("val_num_batches", 5, "Val num batches [5]")
 flags.DEFINE_boolean("load", False, "Load from saved model? [False]")
 flags.DEFINE_boolean("progress", True, "Show progress? [True]")
 flags.DEFINE_boolean("gpu", False, 'Enable GPU? (Linux only) [False]')
