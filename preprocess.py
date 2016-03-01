@@ -203,8 +203,8 @@ def prepro_questions(args):
         anno_path = os.path.join(annos_dir, ques_name)
         image_path = os.path.join(images_dir, image_name)
         num_choices = 0
-        assert os.path.exists(anno_path), "%s does not exist."
-        assert os.path.exists(image_path), "%s does not exist."
+        assert os.path.exists(anno_path), "%s does not exist." % anno_path
+        assert os.path.exists(image_path), "%s does not exist." % image_path
         ques = json.load(open(ques_path, "rb"))
         for ques_text, d in ques['questions'].iteritems():
             ques_words = _tokenize(ques_text)

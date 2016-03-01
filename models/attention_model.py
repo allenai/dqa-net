@@ -144,6 +144,8 @@ class Layer(object):
         self.p = p
         self.u = u
         self.o = o
+        self.input_encoder = input_encoder
+        self.output_encoder = output_encoder
 
 
 class AttentionModel(BaseModel):
