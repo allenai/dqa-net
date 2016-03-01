@@ -17,6 +17,7 @@ class DataSet(object):
         self.idxs = idxs
         self.num_examples = len(idxs)
         self.num_batches = self.num_examples / self.batch_size + int(self.include_leftover)
+        self.reset()
 
     def get_next_labeled_batch(self):
         assert self.has_next_batch(), "End of data, reset required."

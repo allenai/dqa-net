@@ -83,7 +83,6 @@ class BaseModel(object):
 
     def eval(self, sess, eval_data_set, is_val=False):
         params = self.params
-        eval_data_set.reset()
         if is_val:
             num_batches = params.val_num_batches
         else:
@@ -102,6 +101,7 @@ class BaseModel(object):
             pbar.update(num_batches_completed)
         pbar.finish()
         loss = np.mean(losses)
+        eval_data_set.reset()
 
         print("at %d: acc = %.2f%% = %d / %d, loss = %.4f" %
               (global_step, 100 * float(num_corrects)/total, num_corrects, total, loss))
