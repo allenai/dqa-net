@@ -20,7 +20,11 @@
             <tr>
                 <td>{{ row.image_id }}</td>
                 <td>{{ row.question_id }}</td>
-                <td><img src="{{ row.image_url }}"></td>
+                <td>
+                    {% if show_im %}
+                        <img src="{{ row.image_url }}">
+                    {% endif %}
+                </td>
                 <td>{{ row.question }}</td>
                 <td>
                     <ol>
