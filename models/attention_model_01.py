@@ -336,6 +336,6 @@ class AttentionModel(BaseModel):
         p = self.params
         N, C = p.batch_size, p.num_choices
         y = np.zeros([N, C], dtype='int8')
-        for label in label_batch:
-            y[label] = 1
+        for i, label in enumerate(label_batch):
+            y[i, label] = 1
         return y
