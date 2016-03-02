@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<style>
+    img {max-width: {{ image_width }}px; height: auto}
+    table, th, td {border: 1px solid black}
+</style>
+<body>
+    <h2>{{ title }}</h2>
+    <table>
+        <tr>
+            {% for header in headers %}
+                <th>{{ header }}</th>
+            {% endfor %}
+        </tr>
+        {% for row in rows %}
+            <tr>
+                <td>{{ row.image_id }}</td>
+                <td>{{ row.question_id }}</td>
+                <td>
+                    {% if show_im %}
+                        {% if row.replaced %}
+                            <img src="{{ row.rep_image_url }}">
+                        {% else %}
+                            <img src="{{ row.image_url }}">
+                        {% endif %}
+                    {% else %}
+                        Image hidden.
+                    {% endif %}
+                </td>
+                <td>{{ row.question }}</td>
+                <td>
+                    <ol>
+                    {% for choice in row.choices %}
+                        <li>{{ choice }}</li>
+                    {% endfor %}
+                    </ol>
+                </td>
+                <td>{{ row.answer }}</td>
+                <td><a href="{{ row.anno_url }}">Open</a> </td>
+                <td>
+                    <ol>
+                    {% for relation in row.relations %}
+                        <li>
+                            {% if row.replaced %}
+                                {{ relation.a1r }} -> {{ relation.a2r }}
+                            {% else %}
+                                {{ relation.a1 }} -> {{ relation.a2 }}
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                    </ol>
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+
+</body>
+</html>

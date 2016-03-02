@@ -2,12 +2,17 @@ import argparse
 import os
 import json
 from collections import defaultdict
+from copy import deepcopy
 from pprint import pprint
 import re
 
 import numpy as np
+from nltk.stem import PorterStemmer
 
 from utils import get_pbar
+
+
+stemmer = PorterStemmer()
 
 
 def get_args():
@@ -20,11 +25,18 @@ def get_args():
 
 def _tokenize(raw):
     tokens = re.findall(r"[\w]+", raw)
-    tokens = [token.lower() for token in tokens]
     return tokens
 
 
+def _vadd(vocab_counter, word):
+    word = word.lower()
+    word = stemmer.stem(word)
+    vocab_counter[word] += 1
+
+
 def _vget(vocab_dict, word):
+    word = word.lower()
+    word = stemmer.stem(word)
     return vocab_dict[word] if word in vocab_dict else 0
 
 
@@ -35,12 +47,13 @@ def _vlup(vocab_dict, words):
 def _get_text(vocab_dict, anno, key):
     if key[0] == 'T':
         value = anno['text'][key]['value']
-        return _vlup(vocab_dict, _tokenize(value))
+        repText = anno['text'][key]['replacementText']
+        return _vlup(vocab_dict, _tokenize(value)), _vlup(vocab_dict, _tokenize(repText))
     elif key[0] == 'O':
         if 'text' in anno['objects'][key]:
             new_key = anno['objects'][key]['text'][0]
             return _get_text(vocab_dict, anno, new_key)
-    return []
+    return [], []
 
 
 def _get_center(anno, key):
@@ -93,7 +106,7 @@ def prepro_annos(args):
     target_dir = args.target_dir
     vocab_path = os.path.join(target_dir, "vocab.json")
     vocab = json.load(open(vocab_path, "rb"))
-    relations_path = os.path.join(target_dir, "relations.json")
+    relations_path = os.path.join(target_dir, "image_relations.json")
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     meta_data = json.load(open(meta_data_path, "rb"))
 
@@ -145,13 +158,13 @@ def prepro_annos(args):
                     idx = hot_index_dict[(rel_type, rel_subtype, category)]
                     # type_ = _get_1hot_vector(dim, idx)
                     type_ = idx
-                    origin_text = _get_text(vocab, anno, origin_key)
-                    dest_text = _get_text(vocab, anno, dest_key)
+                    origin_text, origin_rep = _get_text(vocab, anno, origin_key)
+                    dest_text, dest_rep = _get_text(vocab, anno, dest_key)
                     max_label_size = max(max_label_size, len(origin_text), len(dest_text))
                     # relation = dict(type=type_, l0=origin_center, l1=dest_center, lh=head_center, la=arrow_center, t0=origin_text, t1=dest_text)
                     pred = origin_center + dest_center + head_center + arrow_center
                     assert len(pred) == meta_data['pred_size'], "Wrong predicate size: %d" % len(pred)
-                    relation = dict(a1=origin_text, pred=pred, a2=dest_text)
+                    relation = dict(a1=origin_text, pred=pred, a2=dest_text, a1r=origin_rep, a2r=dest_rep)
                     relations.append(relation)
         # TODO : arrow relations as well?
         relations_dict[image_id] = relations
@@ -179,14 +192,20 @@ def prepro_questions(args):
     sents_path = os.path.join(target_dir, "sents.json")
     answer_path = os.path.join(target_dir, "answers.json")
     id_map_path = os.path.join(target_dir, "id_map.json")
+    replaced_path = os.path.join(target_dir, "replaced.json")
     vocab_path = os.path.join(target_dir, "vocab.json")
     meta_data_path = os.path.join(target_dir, "meta_data.json")
+    image_relations_path = os.path.join(target_dir, "image_relations.json")
+    relations_path = os.path.join(target_dir, "relations.json")
     vocab = json.load(open(vocab_path, "rb"))
     meta_data = json.load(open(meta_data_path, "rb"))
+    image_relations_dict = json.load(open(image_relations_path, "rb"))
 
     sents_dict = {}
     answer_dict = {}
     id_map = {}
+    replaced = {}
+    relations_dict = {}
 
     ques_names = os.listdir(questions_dir)
     question_id = 0
@@ -199,6 +218,7 @@ def prepro_questions(args):
             pbar.update(i)
             continue
         image_id, _ = os.path.splitext(image_name)
+        relations = image_relations_dict[image_id]
         ques_path = os.path.join(questions_dir, ques_name)
         anno_path = os.path.join(annos_dir, ques_name)
         image_path = os.path.join(images_dir, image_name)
@@ -218,6 +238,13 @@ def prepro_questions(args):
             id_map[str(question_id)] = image_id
             question_id += 1
             max_sent_size = max(max_sent_size, max(len(sent) for sent in sents))
+            replaced[str(question_id)] = d['abcLabel']
+            new_relations = deepcopy(relations)
+            if d['abcLabel']:
+                for relation in new_relations:
+                    relation['a1'] = relation['a1r']
+                    relation['a2'] = relation['a2r']
+            relations_dict[str(question_id)] = new_relations
         pbar.update(i)
     pbar.finish()
     meta_data['max_sent_size'] = max_sent_size
@@ -231,6 +258,8 @@ def prepro_questions(args):
     json.dump(answer_dict, open(answer_path, "wb"))
     json.dump(id_map, open(id_map_path, "wb"))
     json.dump(meta_data, open(meta_data_path, "wb"))
+    json.dump(replaced_path, open(replaced_path, "wb"))
+    json.dump(relations_dict, open(relations_path, "wb"))
     print("done")
 
 
@@ -255,7 +284,7 @@ def build_vocab(args):
         for _, d in anno['text'].iteritems():
             text = d['value']
             for word in _tokenize(text):
-                vocab_counter[word] += 1
+                _vadd(vocab_counter, word)
         pbar.update(i)
     pbar.finish()
 
@@ -269,14 +298,21 @@ def build_vocab(args):
         ques_path = os.path.join(questions_dir, ques_name)
         ques = json.load(open(ques_path, "rb"))
         for ques_text, d in ques['questions'].iteritems():
-            for word in _tokenize(ques_text): vocab_counter[word] += 1
+            for word in _tokenize(ques_text):
+                _vadd(vocab_counter, word)
             for choice in d['answerTexts']:
-                for word in _tokenize(choice): vocab_counter[word] += 1
+                for word in _tokenize(choice):
+                    _vadd(vocab_counter, word)
         pbar.update(i)
     pbar.finish()
 
-    vocab_list = zip(*sorted([pair for pair in vocab_counter.iteritems() if pair[1] > min_count],
-                             key=lambda x: -x[1]))[0]
+    vocab_list, counts = zip(*sorted([pair for pair in vocab_counter.iteritems() if pair[1] > min_count],
+                             key=lambda x: -x[1]))
+
+    freq = 5
+    print("top %d frequent words:" % freq)
+    for word, count in zip(vocab_list[:freq], counts[:freq]):
+        print("%r: %d" % (word, count))
 
     vocab_dict = {word: idx+1 for idx, word in enumerate(sorted(vocab_list))}
     vocab_dict['UNK'] = 0
@@ -298,5 +334,5 @@ if __name__ == "__main__":
     ARGS = get_args()
     create_meta_data(ARGS)
     build_vocab(ARGS)
-    prepro_questions(ARGS)
     prepro_annos(ARGS)
+    prepro_questions(ARGS)
