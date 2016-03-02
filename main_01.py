@@ -4,7 +4,7 @@ import os
 
 import tensorflow as tf
 
-from models.attention_model import AttentionModel
+from models.attention_model_01 import AttentionModel
 from read_data import read_data
 
 flags = tf.app.flags
@@ -19,7 +19,8 @@ flags.DEFINE_string("test_data_dir", 'data/1500-test', "Test data directory [dat
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
 flags.DEFINE_integer("hidden_size", 50, "Hidden size [50]")
-flags.DEFINE_integer("num_layers", 3, "Number of layers [3]")
+flags.DEFINE_integer("num_layers", 1, "Number of layers [1]")
+flags.DEFINE_integer("rnn_num_layers", 1, "Number of rnn layers [1]")
 flags.DEFINE_float("init_mean", 0, "Initial weight mean [0]")
 flags.DEFINE_float("init_std", 0.1, "Initial weight std [0.1]")
 flags.DEFINE_float("init_lr", 0.01, "Initial learning rate [0.01]")
