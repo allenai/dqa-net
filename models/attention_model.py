@@ -185,7 +185,7 @@ class AttentionModel(BaseModel):
 
         with tf.variable_scope('yp'):
             self.W = tf.get_variable('W', dtype='float', shape=[d, 1])
-            self.bW = tf.get_variable('b')
+            self.bW = tf.get_variable('b', shape=[])
             last_u_flat = tf.reshape(last_u, [N*C, d])
             logit_flat = tf.matmul(last_u_flat, self.W) + self.bW  # [N*C, 1]
             self.logit = tf.reshape(logit_flat, [N, C])

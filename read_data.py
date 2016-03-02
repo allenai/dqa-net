@@ -48,18 +48,16 @@ def read_data(name, params, data_dir):
     relations_path = os.path.join(data_dir, "relations.json")
     answers_path = os.path.join(data_dir, "answers.json")
     vocab_path = os.path.join(data_dir, "vocab.json")
-    id_map_path = os.path.join(data_dir, "id_map.json")
     meta_data_path = os.path.join(data_dir, "meta_data.json")
 
     sents_dict = json.load(open(sents_path, "rb"))
     relations_dict = json.load(open(relations_path, "rb"))
     answer_dict = json.load(open(answers_path, "rb"))
-    id_map = json.load(open(id_map_path, "rb"))
 
     batch_size = params.batch_size
     question_ids = sorted(sents_dict.keys())
     sentss = [sents_dict[id_] for id_ in question_ids]
-    relationss = [relations_dict[id_map[id_]] for id_ in question_ids]
+    relationss = [relations_dict[id_] for id_ in question_ids]
     answers = [answer_dict[id_] for id_ in question_ids]
     data = [sentss, relationss, answers]
     idxs = range(len(question_ids))

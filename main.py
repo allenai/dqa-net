@@ -12,9 +12,9 @@ flags = tf.app.flags
 # File directories
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
 flags.DEFINE_string("save_dir", "save", "Save directory [save]")
-flags.DEFINE_string("train_data_dir", 'data/all', "Train data directory [data/all]")
-flags.DEFINE_string("val_data_dir", 'data/all', "Val data directory [data/all]")
-flags.DEFINE_string("test_data_dir", 'data/all', "Test data directory [data/all]")
+flags.DEFINE_string("train_data_dir", 'data/1500-train', "Train data directory [data/1500-train]")
+flags.DEFINE_string("val_data_dir", 'data/1500-test', "Val data directory [data/1500-test]")
+flags.DEFINE_string("test_data_dir", 'data/1500-test', "Test data directory [data/1500-test]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
