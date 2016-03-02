@@ -95,7 +95,7 @@ class BaseModel(object):
         pbar.start()
         for num_batches_completed in xrange(num_batches):
             batch = eval_data_set.get_next_labeled_batch()
-            (cur_num_corrects, cur_loss, _, global_step), values = self.eval_batch(sess, batch, eval_tensors=eval_tensors)
+            (cur_num_corrects, cur_loss, _, global_step), eval_values = self.eval_batch(sess, batch, eval_tensors=eval_tensors)
             num_corrects += cur_num_corrects
             total += len(batch[0])
             losses.append(cur_loss)

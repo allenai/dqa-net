@@ -227,7 +227,7 @@ def test_pattern(pattern, text):
     return s, e
 
 if __name__ == "__main__":
-    question = "Is this a good place?"
-    answer = "yes"
+    question = "Does frog fly?"
+    answer = "no"
     sent = qa2hypo(question, answer)
     print(sent)
