@@ -18,7 +18,7 @@ flags.DEFINE_string("test_data_dir", 'data/1500-test', "Test data directory [dat
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
-flags.DEFINE_integer("hidden_size", 50, "Hidden size [50]")
+flags.DEFINE_integer("hidden_size", 100, "Hidden size [50]")
 flags.DEFINE_integer("num_layers", 1, "Number of layers [1]")
 flags.DEFINE_integer("rnn_num_layers", 1, "Number of rnn layers [1]")
 flags.DEFINE_float("init_mean", 0, "Initial weight mean [0]")
