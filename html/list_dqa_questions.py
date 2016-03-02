@@ -62,7 +62,7 @@ def list_dqa_questions(args):
                 'rows': rows,
                 'show_im': args.show_im}
 
-    env = Environment(loader=FileSystemLoader('html_templates'))
+    env = Environment(loader=FileSystemLoader('templates'))
     template = env.get_template(args.template_name)
     out = template.render(**var_dict)
     with open(html_path, "wb") as f:
