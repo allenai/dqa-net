@@ -10,6 +10,7 @@ import re
 import numpy as np
 from nltk.stem import PorterStemmer
 
+from qa2hypo import qa2hypo
 from utils import get_pbar
 
 
@@ -229,9 +230,12 @@ def prepro_questions(args):
         assert os.path.exists(image_path), "%s does not exist." % image_path
         ques = json.load(open(ques_path, "rb"))
         for ques_text, d in ques['questions'].iteritems():
+            """
             ques_words = _tokenize(ques_text)
             choice_wordss = [_tokenize(choice) for choice in d['answerTexts']]
             sents = [_vlup(vocab, ques_words + choice_words) for choice_words in choice_wordss]
+            """
+            sents = [_vlup(vocab, _tokenize(qa2hypo(ques_text, choice))) for choice in d['answerTexts']]
             assert not num_choices or num_choices == len(sents), "number of choices don't match: %s" % ques_name
             num_choices = len(sents)
             # TODO : one hot vector or index?
