@@ -11,7 +11,6 @@ from utils import get_pbar
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("data_dir")
     parser.add_argument("prepro_dir")
     parser.add_argument("--start", default=0, type=int)
     parser.add_argument("--stop", default=1500, type=int)
@@ -41,13 +40,16 @@ def _decode_relation(decoder, relation):
 
 
 def interpret_relations(args):
-    data_dir = args.data_dir
+    prepro_dir = args.prepro_dir
+    meta_data_dir = os.path.join(prepro_dir, "meta_data.json")
+    meta_data = json.load(open(meta_data_dir, "rb"))
+    data_dir = meta_data['data_dir']
+
     images_dir = os.path.join(data_dir, 'images')
     annos_dir = os.path.join(data_dir, 'annotations')
     replaced_images_dir = os.path.join(data_dir, "imagesReplacedText")
     html_path = args.html_path
 
-    prepro_dir = args.prepro_dir
     sents_path = os.path.join(prepro_dir, 'sents.json')
     relations_path = os.path.join(prepro_dir, 'relations.json')
     vocab_path = os.path.join(prepro_dir, 'vocab.json')
@@ -78,7 +80,7 @@ def interpret_relations(args):
         anno_path = os.path.join(annos_dir, json_name)
         # anno = json.load(open(anno_path, 'rb'))
         replaced_image_path = os.path.join(replaced_images_dir, image_name)
-        relations = relations_dict[image_id]
+        relations = relations_dict[question_id]
         decoded_relations = [_decode_relation(decoder, relation) for relation in relations]
         row = {'image_id': image_id,
                'question_id': question_id,

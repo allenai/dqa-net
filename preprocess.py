@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+import shutil
 from collections import defaultdict
 from copy import deepcopy
 from pprint import pprint
@@ -20,6 +21,7 @@ def get_args():
     parser.add_argument("data_dir")
     parser.add_argument("target_dir")
     parser.add_argument("--min_count", type=int, default=5)
+    parser.add_argument("--train_dir", default="")
     return parser.parse_args()
 
 
@@ -264,6 +266,12 @@ def prepro_questions(args):
 
 
 def build_vocab(args):
+    if args.train_dir:
+        vocab_path = os.path.join(args.train_dir, "vocab.json")
+        new_vocab_path = os.path.join(args.target_dir, "vocab.json")
+        print "using vocab from %s" % vocab_path
+        shutil.copy(vocab_path, new_vocab_path)
+        return
     data_dir = args.data_dir
     target_dir = args.target_dir
     min_count = args.min_count
@@ -326,7 +334,7 @@ def create_meta_data(args):
     if not os.path.exists(target_dir):
         os.mkdir(target_dir)
     meta_data_path = os.path.join(target_dir, "meta_data.json")
-    meta_data = {}
+    meta_data = {'data_dir': args.data_dir}
     json.dump(meta_data, open(meta_data_path, "wb"))
 
 
