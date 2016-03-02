@@ -6,7 +6,7 @@ from tensorflow.models.rnn import rnn_cell
 from tensorflow.python.ops import rnn
 
 import nn
-from models.base_model import BaseModel
+from models.base_model_01 import BaseModel
 
 VERY_SMALL_NUMBER = -1e10
 

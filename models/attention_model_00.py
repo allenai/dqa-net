@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 import nn
-from models.base_model import BaseModel
+from models.base_model_00 import BaseModel
 
 VERY_SMALL_NUMBER = -1e10
 
