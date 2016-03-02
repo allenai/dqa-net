@@ -31,11 +31,12 @@
                         Image hidden.
                     {% endif %}
                 </td>
-                <td>{{ row.question }}</td>
                 <td>
-                    <ol>
-                    {% for choice in row.choices %}
-                        <li>{{ choice }}</li>
+                    <ol start="0">
+                    {% for sent in row.sents %}
+                        <li>
+                            {{ sent }}
+                        </li>
                     {% endfor %}
                     </ol>
                 </td>
@@ -45,11 +46,7 @@
                     <ol>
                     {% for relation in row.relations %}
                         <li>
-                            {% if row.replaced %}
-                                {{ relation.a1r }} -> {{ relation.a2r }}
-                            {% else %}
-                                {{ relation.a1 }} -> {{ relation.a2 }}
-                            {% endif %}
+                            {{ relation.a1 }} -> {{ relation.a2 }}
                         </li>
                     {% endfor %}
                     </ol>

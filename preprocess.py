@@ -236,7 +236,6 @@ def prepro_questions(args):
             sents_dict[str(question_id)] = sents
             answer_dict[str(question_id)] = d['correctAnswer']
             id_map[str(question_id)] = image_id
-            question_id += 1
             max_sent_size = max(max_sent_size, max(len(sent) for sent in sents))
             replaced[str(question_id)] = d['abcLabel']
             new_relations = deepcopy(relations)
@@ -245,6 +244,7 @@ def prepro_questions(args):
                     relation['a1'] = relation['a1r']
                     relation['a2'] = relation['a2r']
             relations_dict[str(question_id)] = new_relations
+            question_id += 1
         pbar.update(i)
     pbar.finish()
     meta_data['max_sent_size'] = max_sent_size
@@ -258,7 +258,7 @@ def prepro_questions(args):
     json.dump(answer_dict, open(answer_path, "wb"))
     json.dump(id_map, open(id_map_path, "wb"))
     json.dump(meta_data, open(meta_data_path, "wb"))
-    json.dump(replaced_path, open(replaced_path, "wb"))
+    json.dump(replaced, open(replaced_path, "wb"))
     json.dump(relations_dict, open(relations_path, "wb"))
     print("done")
 
