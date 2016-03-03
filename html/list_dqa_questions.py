@@ -19,10 +19,10 @@ def get_args():
     parser.add_argument("--im_width", type=int, default=200)
     parser.add_argument("--ext", type=str, default=".png")
     parser.add_argument("--template_name", type=str, default="list_dqa_questions.html")
-    parser.add_argument("--mode", type=str, default='open')
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--num_im", type=int, default=20)
+    parser.add_argument("--num_im", type=int, default=50)
+    parser.add_argument("--open", type=str, default='False')
 
     return parser.parse_args()
 
@@ -65,7 +65,7 @@ def list_dqa_questions(args):
             for j, (question, d) in enumerate(question_dict['questions'].iteritems()):
                 row = {'image_id': image_id,
                        'question_id': str(j),
-                       'image_url': os.path.join("images" if d['abcLabel'] else "imagesReplacedText", image_name),
+                       'image_url': os.path.join("images" if not d['abcLabel'] else "imagesReplacedText", image_name),
                        'anno_url': os.path.join("annotations", json_name),
                        'question': question,
                        'choices': d['answerTexts'],
@@ -88,21 +88,20 @@ def list_dqa_questions(args):
     pbar.finish()
 
 
-    if args.mode == 'open':
-        os.system("open %s" % html_path)
-    elif args.mode == 'host':
-        os.system("ln -s %s/* %s" % (data_dir, html_dir))
-        os.chdir(html_dir)
-        port = args.port
-        host = args.host
-        # Overriding to suppress log message
-        class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
-            def log_message(self, format, *args):
-                pass
-        handler = MyHandler
-        httpd = SocketServer.TCPServer((host, port), handler)
-        print "serving at %s:%d" % (host, port)
-        httpd.serve_forever()
+    os.system("ln -s %s/* %s" % (data_dir, html_dir))
+    os.chdir(html_dir)
+    port = args.port
+    host = args.host
+    # Overriding to suppress log message
+    class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+        def log_message(self, format, *args):
+            pass
+    handler = MyHandler
+    httpd = SocketServer.TCPServer((host, port), handler)
+    if args.open == 'True':
+        os.system("open http://%s:%d" % (args.host, args.port))
+    print "serving at %s:%d" % (host, port)
+    httpd.serve_forever()
 
 
 if __name__ == "__main__":
