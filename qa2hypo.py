@@ -307,10 +307,10 @@ def test_pattern(pattern, text):
     return s, e
 
 if __name__ == "__main__":
-    question = "Does frog fly?"
-    answer = "no"
-    sent = qa2hypo(question, answer)
-    print(sent)
+    # question = "Does frog fly?"
+    # answer = "no"
+    # sent = qa2hypo(question, answer)
+    # print(sent)
 
-    # qa2hypo_test(get_args())
+    qa2hypo_test(get_args())
 
