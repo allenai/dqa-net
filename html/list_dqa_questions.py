@@ -24,6 +24,7 @@ def get_args():
 def list_dqa_questions(args):
     data_dir = args.data_dir
     images_dir = os.path.join(data_dir, "images")
+    replaced_images_dir = os.path.join(data_dir, "imagesReplacedText")
     questions_dir = os.path.join(data_dir, "questions")
     annos_dir = os.path.join(data_dir, "annotations")
     html_path = args.html_path
@@ -38,6 +39,7 @@ def list_dqa_questions(args):
     for i, image_name in enumerate(image_names):
         image_id, _ = os.path.splitext(image_name)
         image_path = os.path.join(images_dir, image_name)
+        replaced_image_path = os.path.join(replaced_images_dir, image_name)
         json_name = "%s.json" % image_name
         question_path = os.path.join(questions_dir, json_name)
         anno_path = os.path.join(annos_dir, json_name)
@@ -48,7 +50,7 @@ def list_dqa_questions(args):
         for j, (question, d) in enumerate(question_dict['questions'].iteritems()):
             row = {'image_id': image_id,
                    'question_id': str(j),
-                   'image_url': image_path,
+                   'image_url': replaced_image_path if d['abcLabel'] else image_path,
                    'anno_url': anno_path,
                    'question': question,
                    'choices': d['answerTexts'],
@@ -56,7 +58,7 @@ def list_dqa_questions(args):
             rows.append(row)
         pbar.update(i)
     pbar.finish()
-    var_dict = {'title': "Question List: %d - %d" % (args.start, args.stop - 1),
+    var_dict = {'title': "Question List",
                 'image_width': args.im_width,
                 'headers': headers,
                 'rows': rows,
