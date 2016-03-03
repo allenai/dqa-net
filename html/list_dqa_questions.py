@@ -23,6 +23,7 @@ def get_args():
     parser.add_argument("--mode", type=str, default='open')
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--host", type=str, default="0.0.0.0")
+    parser.add_argument("--num_im", type=int, default=20)
 
     return parser.parse_args()
 
@@ -33,7 +34,11 @@ def list_dqa_questions(args):
     questions_dir = os.path.join(data_dir, "questions")
     html_dir = args.html_dir
     annos_dir = os.path.join(data_dir, "annotations")
-    html_path = os.path.join(html_dir, "index.html")
+
+    cur_dir = os.path.dirname(os.path.realpath(__file__))
+    templates_dir = os.path.join(cur_dir, 'templates')
+    env = Environment(loader=FileSystemLoader(templates_dir))
+    template = env.get_template(args.template_name)
 
     if os.path.exists(html_dir):
         shutil.rmtree(html_dir)
@@ -51,35 +56,34 @@ def list_dqa_questions(args):
         json_name = "%s.json" % image_name
         anno_path = os.path.join(annos_dir, json_name)
         question_path = os.path.join(questions_dir, json_name)
-        if not os.path.exists(question_path):
-            continue
-        question_dict = json.load(open(question_path, "rb"))
-        anno_dict = json.load(open(anno_path, "rb"))
-        for j, (question, d) in enumerate(question_dict['questions'].iteritems()):
-            row = {'image_id': image_id,
-                   'question_id': str(j),
-                   'image_url': os.path.join("images" if d['abcLabel'] else "imagesReplacedText", image_name),
-                   'anno_url': os.path.join("annotations", json_name),
-                   'question': question,
-                   'choices': d['answerTexts'],
-                   'answer': d['correctAnswer']}
-            rows.append(row)
+        if os.path.exists(question_path):
+            question_dict = json.load(open(question_path, "rb"))
+            anno_dict = json.load(open(anno_path, "rb"))
+            for j, (question, d) in enumerate(question_dict['questions'].iteritems()):
+                row = {'image_id': image_id,
+                       'question_id': str(j),
+                       'image_url': os.path.join("images" if d['abcLabel'] else "imagesReplacedText", image_name),
+                       'anno_url': os.path.join("annotations", json_name),
+                       'question': question,
+                       'choices': d['answerTexts'],
+                       'answer': d['correctAnswer']}
+                rows.append(row)
+
+        if i % args.num_im == 0:
+            html_path = os.path.join(html_dir, "%s.html" % str(image_id).zfill(8))
+
+        if (i + 1) % args.num_im == 0 or (i + 1) == len(image_names):
+            var_dict = {'title': "Question List",
+                        'image_width': args.im_width,
+                        'headers': headers,
+                        'rows': rows,
+                        'show_im': args.show_im}
+            with open(html_path, "wb") as f:
+                f.write(template.render(**var_dict).encode('UTF-8'))
+            rows = []
         pbar.update(i)
     pbar.finish()
-    var_dict = {'title': "Question List",
-                'image_width': args.im_width,
-                'headers': headers,
-                'rows': rows,
-                'show_im': args.show_im}
 
-    cur_dir = os.path.dirname(os.path.realpath(__file__))
-    templates_dir = os.path.join(cur_dir, 'templates')
-    env = Environment(loader=FileSystemLoader(templates_dir))
-    template = env.get_template(args.template_name)
-    out = template.render(**var_dict)
-    encoded = out.encode('UTF-8')
-    with open(html_path, "wb") as f:
-        f.write(encoded)
 
     if args.mode == 'open':
         os.system("open %s" % html_path)
