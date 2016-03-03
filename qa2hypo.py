@@ -4,12 +4,14 @@ import argparse
 import os
 import random
 import re
+import string
 
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('root_dir')
     ARGS = parser.parse_args()
+    return ARGS
 
 # auxiliary verbs, from https://en.wikipedia.org/wiki/Auxiliary_verb
 AUX_V = ['am', 'is', 'are', 'can', 'could', 'dare', 'do', 'does', 'did', 'have', 'had', 'may', 'might', 'must', 'need', 'shall', 'should', 'will', 'would']
@@ -18,6 +20,8 @@ AUX_V_BE = ['am', 'is', 'are']
 AUX_V_BE_REGEX = '('+'|'.join(['('+AUX_V_BE[i]+')' for i in range(len(AUX_V_BE))])+')'
 AUX_V_DOES = ['can', 'could', 'dare', 'does', 'did', 'have', 'had', 'may', 'might', 'must', 'need', 'shall', 'should', 'will', 'would']
 AUX_V_DOES_REGEX = '('+'|'.join(['('+AUX_V_DOES[i]+')' for i in range(len(AUX_V_DOES))])+')'
+AUX_V_DOESONLY = ['does', 'did']
+AUX_V_DOESONLY_REGEX = '('+'|'.join(['('+AUX_V_DOESONLY[i]+')' for i in range(len(AUX_V_DOESONLY))])+')'
 AUX_V_DO_REGEX = '(do)'
 
 
@@ -31,7 +35,8 @@ QUESTION_TYPES = ['__+', \
 'why', \
 '(how many)|(how much)', \
 '(\Ahow [^(many)(much)])|(\W+how [^(many)(much)])', \
-'(name)|(choose)|(identify)'
+'(name)|(choose)|(identify)', \
+'(\A'+AUX_V_REGEX+' )|(([!"#$%&()*+,-./:;<=>?@\[\\\]^_`{|}~]){1} '+AUX_V_REGEX+' )'
 ]
 
 
@@ -39,9 +44,58 @@ QUESTION_TYPES = ['__+', \
 # -1: don't sample randomly, sample by question type
 # 0: sample the inverse of all the question types
 # not -1 or 0: sample by question type
-SAMPLE_TYPE = 200
+SAMPLE_TYPE = -1
 # used when SAMPLE_TYPE == -1
-QUESTION_TYPE = 8
+QUESTION_TYPE = 10
+
+
+# turn qa_pairs into hypotheses, test
+def qa2hypo_test(args):
+    root_dir = args.root_dir
+    qa_path = os.path.join(root_dir, 'qa_pairs.json')
+    qa_res_path = os.path.join(root_dir, 'qa_res.json')
+
+    print "Loading json files ..."
+    qa_pairs = json.load(open(qa_path, 'rb'))
+    qa_pairs_list = qa_pairs['qa_pairs']
+
+    # number of samples and the types of questions to sample
+    k = SAMPLE_TYPE
+    
+    # execute the sampling (for the purpose of examining the result)
+    q_type = QUESTION_TYPES[QUESTION_TYPE]
+    qa_pairs_list = sample_qa(qa_pairs_list, k, q_type) # set the case lower in the function for questions
+    
+    # result file
+    res = []
+
+    ctr = 0
+    for item in qa_pairs_list:
+        question = item['question']
+        ans = item['ans']
+        question = question.lower()
+        ans = ans.lower().strip('.')
+
+        # determine the question type:
+        if k != -1:
+            q_type = get_question_type(question)
+
+        print 'Question:', question
+        print 'Answer:', ans
+
+        test_patterns([q_type], question)
+        sent = rule_based_transform(question, ans, q_type)
+        
+        print 'Result:', sent
+        res.append({'Question':question, 'Answer':ans, 'Result':sent})
+
+        ctr += 1
+        print "--------------------------------------"
+    
+    print ctr
+    print "Dumping json files ..."
+    json.dump(res, open(qa_res_path, 'wb'))
+
 
 # turn qa_pairs into hypotheses
 def qa2hypo(question, answer):
@@ -90,13 +144,22 @@ def rule_based_transform(question, ans, q_type):
             elif re.search('where '+AUX_V_DO_REGEX, question):
                 s3, e3 = test_pattern('where '+AUX_V_DO_REGEX, question)
                 hypo = replace(question, s3, e3, '')
-                hypo = strip_nonalnum_re(hypo)+' in '+ans
+                hypo = strip_nonalnum_re(hypo)+' at '+ans
             else:
                 hypo = replace(question, s, e, ans)
 
         elif q_type == QUESTION_TYPES[3]:
             s, e = test_pattern('what', question)
-            hypo = replace(question, s, e, ans)
+            if re.search('what '+AUX_V_DOESONLY_REGEX, question):
+                s2, e2 = test_pattern('what '+AUX_V_DOESONLY_REGEX, question)
+                hypo = replace(question, s2, e2, '')
+                hypo = strip_nonalnum_re(hypo)+' '+ans
+            elif re.search('what '+AUX_V_DO_REGEX, question):
+                s3, e3 = test_pattern('what '+AUX_V_DO_REGEX, question)
+                hypo = replace(question, s3, e3, '')
+                hypo = strip_nonalnum_re(hypo)+' '+ans
+            else:
+                hypo = replace(question, s, e, ans)
 
         elif q_type == QUESTION_TYPES[4]:
             s, e = test_pattern('which', question)
@@ -123,6 +186,23 @@ def rule_based_transform(question, ans, q_type):
         elif q_type == QUESTION_TYPES[9]:
             s, e = test_pattern('(name)|(choose)|(identify)', question)
             hypo = replace(question, s, e, ans+' is')
+
+        elif q_type == QUESTION_TYPES[10]:
+            if re.search('(yes, )|(no, )', ans):
+                s, e = test_pattern('(yes, )|(no, )', ans)
+                hypo = replace(ans, s, e, '')
+            elif ' or ' in question:
+                hypo = ans
+            elif re.search('yes\W??', ans):
+                s, e = test_pattern('(\A'+AUX_V_REGEX+' )|(([!"#$%&()*+,-./:;<=>?@\[\\\]^_`{|}~]){1} '+AUX_V_REGEX+' )', question)
+                hypo = replace(question, s, e, "")
+            elif re.search('no\W??', ans):
+                s, e = test_pattern('(\A'+AUX_V_REGEX+' )|(([!"#$%&()*+,-./:;<=>?@\[\\\]^_`{|}~]){1} '+AUX_V_REGEX+' )', question)
+                hypo = "not "+replace(question, s, e, "")
+            else:
+                s, e = test_pattern('(\A'+AUX_V_REGEX+' )|(([!"#$%&()*+,-./:;<=>?@\[\\\]^_`{|}~]){1} '+AUX_V_REGEX+' )', question)
+                hypo = replace(question, s, e, "")
+                hypo = strip_nonalnum_re(hypo)+' '+ans
 
         else:
             hypo = strip_nonalnum_re(question)+' '+ans
@@ -231,3 +311,6 @@ if __name__ == "__main__":
     answer = "no"
     sent = qa2hypo(question, answer)
     print(sent)
+
+    # qa2hypo_test(get_args())
+
