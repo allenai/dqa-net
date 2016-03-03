@@ -18,7 +18,6 @@ def get_args():
     parser.add_argument("--show_im", default='True')
     parser.add_argument("--im_width", type=int, default=200)
     parser.add_argument("--ext", type=str, default=".png")
-    parser.add_argument("--html_dir", type=str, default="/tmp/list_dqa_questions/")
     parser.add_argument("--template_name", type=str, default="list_dqa_questions.html")
     parser.add_argument("--mode", type=str, default='open')
     parser.add_argument("--port", type=int, default=8000)
@@ -32,8 +31,12 @@ def list_dqa_questions(args):
     data_dir = args.data_dir
     images_dir = os.path.join(data_dir, "images")
     questions_dir = os.path.join(data_dir, "questions")
-    html_dir = args.html_dir
     annos_dir = os.path.join(data_dir, "annotations")
+    _id = 0
+    html_dir = "/tmp/list_dqa_questions_%d" % _id
+    while os.path.exists(html_dir):
+        _id += 1
+        html_dir = "/tmp/list_dqa_questions_%d" % _id
 
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     templates_dir = os.path.join(cur_dir, 'templates')
