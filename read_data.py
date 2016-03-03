@@ -71,7 +71,7 @@ if __name__ == "__main__":
     params = Params()
     params.batch_size = 2
     params.train = True
-    ds = read_data(params, sys.argv[1], "train")
+    ds = read_data('temp', params, sys.argv[1])
     for num_batches_completed in range(ds.num_batches):
         sents_batch, relations_batch, answer_batch = ds.get_next_labeled_batch()
     pprint(sents_batch)
