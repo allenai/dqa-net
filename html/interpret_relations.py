@@ -66,7 +66,7 @@ def interpret_relations(args):
 
     headers = ['iid', 'qid', 'image', 'sents', 'answer', 'annotations', 'relations']
     rows = []
-    question_ids = sorted(sents_dict.keys(), key=lambda x: int(x))
+    question_ids = sorted(sents_dict.keys(), key=lambda x: int(id_map[x]))
     question_ids = [id_ for id_ in question_ids if args.start <= int(id_) < args.stop]
     pbar = get_pbar(len(question_ids)).start()
     for i, question_id in enumerate(question_ids):
