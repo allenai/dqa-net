@@ -26,7 +26,7 @@ class DataSet(object):
             to = self.num_examples
         cur_idxs = self.idxs[from_:to]
         batch = [[each[i] for i in cur_idxs] for each in self.data]
-        self.idx_in_epoch += self.batch_size
+        self.idx_in_epoch += len(cur_idxs)
         return batch
 
     def has_next_batch(self):

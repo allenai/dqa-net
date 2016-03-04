@@ -12,9 +12,9 @@ flags = tf.app.flags
 # File directories
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
 flags.DEFINE_string("save_dir", "save", "Save directory [save]")
-flags.DEFINE_string("train_data_dir", 'data/1500-train', "Train data directory [data/1500-train]")
-flags.DEFINE_string("val_data_dir", 'data/1500-test', "Val data directory [data/1500-test]")
-flags.DEFINE_string("test_data_dir", 'data/1500-test', "Test data directory [data/1500-test]")
+flags.DEFINE_string("train_data_dir", 'data/1500r-train', "Train data directory [data/1500-train]")
+flags.DEFINE_string("val_data_dir", 'data/1500r-test', "Val data directory [data/1500-test]")
+flags.DEFINE_string("test_data_dir", 'data/1500r-test', "Test data directory [data/1500-test]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
@@ -64,16 +64,18 @@ def main(_):
 
     # Other parameters
     vocab_path = os.path.join(FLAGS.train_data_dir, "vocab.json")
-    meta_data_path = os.path.join(FLAGS.train_data_dir, "meta_data.json")
+    train_meta_data_path = os.path.join(FLAGS.train_data_dir, "meta_data.json")
+    test_meta_data_path = os.path.join(FLAGS.test_data_dir, "meta_data.json")
     vocab = json.load(open(vocab_path, "rb"))
-    meta_data = json.load(open(meta_data_path, "rb"))
+    train_meta_data = json.load(open(train_meta_data_path, "rb"))
+    test_meta_data = json.load(open(test_meta_data_path, "rb"))
 
     FLAGS.vocab_size = len(vocab)
-    FLAGS.max_sent_size = meta_data['max_sent_size']
-    FLAGS.max_label_size = meta_data['max_label_size']
-    FLAGS.pred_size = meta_data['pred_size']
-    FLAGS.num_choices = meta_data['num_choices']
-    FLAGS.max_num_rels = meta_data['max_num_rels']
+    FLAGS.max_sent_size = max(train_meta_data['max_sent_size'], test_meta_data['max_sent_size'])
+    FLAGS.max_label_size = max(train_meta_data['max_label_size'], test_meta_data['max_label_size'])
+    FLAGS.max_num_rels = max(train_meta_data['max_num_rels'], test_meta_data['max_num_rels'])
+    FLAGS.pred_size = train_meta_data['pred_size']
+    FLAGS.num_choices = train_meta_data['num_choices']
 
     if not os.path.exists(FLAGS.save_dir):
         os.mkdir(FLAGS.save_dir)
