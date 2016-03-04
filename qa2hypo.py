@@ -5,6 +5,8 @@ import os
 import random
 import re
 import string
+import sys
+from nltk.tree import Tree
 
 
 def get_args():
@@ -44,9 +46,23 @@ QUESTION_TYPES = ['__+', \
 # -1: don't sample randomly, sample by question type
 # 0: sample the inverse of all the question types
 # not -1 or 0: sample by question type
-SAMPLE_TYPE = -1
+SAMPLE_TYPE = 5
 # used when SAMPLE_TYPE == -1
-QUESTION_TYPE = 10
+QUESTION_TYPE = 3
+
+
+# for parsing sentences using the stanford core nlp package with a python wrapper
+# from https://github.com/dasmith/stanford-corenlp-python
+# this is effective after launching the server by in parallel doing
+# python corenlp.py
+
+# import importdir
+# importdir.do("/home/anglil/csehomedir/projects/dqa/stanford-corenlp-python", globals())
+
+sys.path.insert(0, '/home/anglil/csehomedir/projects/dqa/dqa-eccv16/stanford-corenlp-python')
+import jsonrpc
+from simplejson import loads
+server = jsonrpc.ServerProxy(jsonrpc.JsonRpc20(), jsonrpc.TransportTcpIp(addr=("127.0.0.1", 8080)))
 
 
 # turn qa_pairs into hypotheses, test
@@ -85,6 +101,8 @@ def qa2hypo_test(args):
 
         test_patterns([q_type], question)
         sent = rule_based_transform(question, ans, q_type)
+        sent_parse = loads(server.parse(sent))
+        print "Parse:", sent_parse
         
         print 'Result:', sent
         res.append({'Question':question, 'Answer':ans, 'Result':sent})
