@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from pprint import pprint
 import os
 
@@ -51,34 +52,42 @@ flags.DEFINE_boolean("draft", False, "Draft? (quick build) [False]")
 FLAGS = flags.FLAGS
 
 
-def main(_):
+def combine_meta_data(train_meta_data, val_meta_data):
+    new_meta_data = deepcopy(train_meta_data)
+    new_meta_data['max_sent_size'] = max(train_meta_data['max_sent_size'], val_meta_data['max_sent_size'])
+    new_meta_data['max_label_size'] = max(train_meta_data['max_label_size'], val_meta_data['max_label_size'])
+    new_meta_data['max_num_rels'] = max(train_meta_data['max_num_rels'], val_meta_data['max_num_rels'])
+    return new_meta_data
 
+def main(_):
     if FLAGS.train:
         train_ds = read_data('train', FLAGS, FLAGS.train_data_dir)
         val_ds = read_data('val', FLAGS, FLAGS.val_data_dir)
         FLAGS.train_num_batches = train_ds.num_batches
         FLAGS.val_num_batches = FLAGS.val_num_batches
+        train_meta_data_path = os.path.join(FLAGS.train_data_dir, "meta_data.json")
+        train_meta_data = json.load(open(train_meta_data_path, "rb"))
+        val_meta_data_path = os.path.join(FLAGS.val_data_dir, "meta_data.json")
+        val_meta_data = json.load(open(val_meta_data_path, "rb"))
+        meta_data = combine_meta_data(train_meta_data, val_meta_data)
+        vocab_path = os.path.join(FLAGS.train_data_dir, "vocab.json")
+        if not os.path.exists(FLAGS.save_dir):
+            os.mkdir(FLAGS.save_dir)
     else:
         test_ds = read_data('test', FLAGS, FLAGS.test_data_dir)
         FLAGS.test_num_batches = test_ds.num_batches
+        meta_data_path = os.path.join(FLAGS.test_data_dir, "meta_data.json")
+        meta_data = json.load(open(meta_data_path, "rb"))
+        vocab_path = os.path.join(FLAGS.test_data_dir, "vocab.json")
 
     # Other parameters
-    vocab_path = os.path.join(FLAGS.train_data_dir, "vocab.json")
-    train_meta_data_path = os.path.join(FLAGS.train_data_dir, "meta_data.json")
-    test_meta_data_path = os.path.join(FLAGS.test_data_dir, "meta_data.json")
+    FLAGS.max_sent_size = meta_data['max_sent_size']
+    FLAGS.max_label_size = meta_data['max_label_size']
+    FLAGS.max_num_rels = meta_data['max_num_rels']
+    FLAGS.pred_size = meta_data['pred_size']
+    FLAGS.num_choices = meta_data['num_choices']
     vocab = json.load(open(vocab_path, "rb"))
-    train_meta_data = json.load(open(train_meta_data_path, "rb"))
-    test_meta_data = json.load(open(test_meta_data_path, "rb"))
-
     FLAGS.vocab_size = len(vocab)
-    FLAGS.max_sent_size = max(train_meta_data['max_sent_size'], test_meta_data['max_sent_size'])
-    FLAGS.max_label_size = max(train_meta_data['max_label_size'], test_meta_data['max_label_size'])
-    FLAGS.max_num_rels = max(train_meta_data['max_num_rels'], test_meta_data['max_num_rels'])
-    FLAGS.pred_size = train_meta_data['pred_size']
-    FLAGS.num_choices = train_meta_data['num_choices']
-
-    if not os.path.exists(FLAGS.save_dir):
-        os.mkdir(FLAGS.save_dir)
 
     # For quick draft build (deubgging).
     if FLAGS.draft:
