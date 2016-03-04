@@ -215,6 +215,7 @@ def prepro_questions(args):
     max_sent_size = 0
     pbar = get_pbar(len(ques_names))
     pbar.start()
+    num_choices = 0
     for i, ques_name in enumerate(ques_names):
         image_name, ext = os.path.splitext(ques_name)
         if ext != ".json":
@@ -225,7 +226,6 @@ def prepro_questions(args):
         ques_path = os.path.join(questions_dir, ques_name)
         anno_path = os.path.join(annos_dir, ques_name)
         image_path = os.path.join(images_dir, image_name)
-        num_choices = 0
         assert os.path.exists(anno_path), "%s does not exist." % anno_path
         assert os.path.exists(image_path), "%s does not exist." % image_path
         ques = json.load(open(ques_path, "rb"))
