@@ -10,12 +10,14 @@ import re
 import numpy as np
 from nltk.stem import PorterStemmer
 
-from qa2hypo import qa2hypo
+# from qa2hypo import qa2hypo
 from utils import get_pbar
 
 
 stemmer = PorterStemmer()
 
+def qa2hypo(question, answer):
+    return "%s %s" % (question, answer)
 
 def get_args():
     parser = argparse.ArgumentParser()
