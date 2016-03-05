@@ -16,6 +16,7 @@ flags.DEFINE_string("save_dir", "save", "Save directory [save]")
 flags.DEFINE_string("train_data_dir", 'data/1500r-train', "Train data directory [data/1500-train]")
 flags.DEFINE_string("val_data_dir", 'data/1500r-test', "Val data directory [data/1500-test]")
 flags.DEFINE_string("test_data_dir", 'data/1500r-test', "Test data directory [data/1500-test]")
+flags.DEFINE_string("eval_dir", "eval", "Eval value storing directory [eval]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
@@ -114,7 +115,8 @@ def main(_):
             model.train(sess, writer, train_ds, val_ds)
         else:
             model.load(sess)
-            model.eval(sess, test_ds)
+            eval_tensors = [model.yp]
+            model.eval(sess, test_ds, eval_tensors=eval_tensors)
 
 if __name__ == "__main__":
     tf.app.run()

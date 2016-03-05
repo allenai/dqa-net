@@ -237,6 +237,7 @@ class AttentionModel(BaseModel):
                 layers.append(cur_layer)
                 prev_layer = cur_layer
         last_layer = layers[-1]
+        o_sum = sum(layer.o for layer in layers)
 
         with tf.variable_scope('m'):
             image_trans_mat = tf.get_variable('I', shape=[G, d])
@@ -245,9 +246,12 @@ class AttentionModel(BaseModel):
             aug_g = tf.expand_dims(g, 2, name='aug_g')  # [N, d, 1]
 
         with tf.variable_scope('yp'):
-            image_logit = tf.squeeze(tf.batch_matmul(last_layer.u, aug_g), [2])  # [N, C]
-            memory_logit = tf.reduce_sum(last_layer.u * last_layer.o, 2)  # [N, C]
-            self.logit = memory_logit
+            # self.logit = tf.squeeze(tf.batch_matmul(last_layer.u + last_layer.o, aug_g), [2])  # [N, C]
+            image_logit = tf.squeeze(tf.batch_matmul(first_u, aug_g), [2])  # [N, C]
+            memory_logit = tf.reduce_sum(first_u * o_sum, 2)  # [N, C]
+            self.logit = image_logit + memory_logit
+            # self.fake_var = tf.get_variable('fake', shape=[d])
+            # self.logit = tf.reduce_sum(first_u, 2)
             self.yp = tf.nn.softmax(self.logit, name='yp')
 
         with tf.name_scope('loss') as loss_scope:
