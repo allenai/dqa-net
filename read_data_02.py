@@ -52,12 +52,15 @@ def read_data(name, params, data_dir):
     meta_data_path = os.path.join(data_dir, "meta_data.json")
     images_path = os.path.join(data_dir, "images.h5")
     id_map_path = os.path.join(data_dir, "id_map.json")
+    image_ids_path = os.path.join(data_dir, "image_ids.json")
 
     sents_dict = json.load(open(sents_path, "rb"))
     relations_dict = json.load(open(relations_path, "rb"))
     answer_dict = json.load(open(answers_path, "rb"))
     images_h5 = h5py.File(images_path, 'r')
     id_map = json.load(open(id_map_path, "rb"))
+    image_ids =json.load(open(image_ids_path, 'rb'))
+    image_id_map = {id_: idx for idx, id_ in enumerate(image_ids)}
 
     batch_size = params.batch_size
     question_ids = sorted(sents_dict.keys())
@@ -65,7 +68,7 @@ def read_data(name, params, data_dir):
     relationss = [relations_dict[id_] for id_ in question_ids]
     answers = [answer_dict[id_] for id_ in question_ids]
     # FIXME : to scale, this had to be fixed
-    images = [images_h5['data'][int(id_map[id_])] for id_ in question_ids]
+    images = [images_h5['data'][image_id_map[id_map[id_]]] for id_ in question_ids]
 
     data = [sentss, relationss, images, answers]
     idxs = range(len(question_ids))

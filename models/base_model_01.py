@@ -50,8 +50,8 @@ class BaseModel(object):
         return (num_corrects, total_loss, summary_str, global_step), values
 
     def train(self, sess, writer, train_data_set, val_data_set):
-        assert isinstance(train_data_set, DataSet)
-        assert isinstance(val_data_set, DataSet)
+        assert isinstance(train_data_set, DataSet), train_data_set.__class__.__name__
+        assert isinstance(val_data_set, DataSet), train_data_set.__class__.__name__
         params = self.params
         learning_rate = params.init_lr
         num_epochs = params.num_epochs

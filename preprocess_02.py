@@ -367,7 +367,7 @@ def create_image_ids_and_paths(args):
 def prepro_images(args):
     model_path = args.vgg_model_path
     proto_path = args.vgg_proto_path
-    out_path = os.path.join(args.target_dir, "images.hdf5")
+    out_path = os.path.join(args.target_dir, "images.h5")
     image_paths_path = os.path.join(args.target_dir, "image_paths.json")
     os.system("th prepro_images.lua --image_path_json %s --cnn_proto %s --cnn_model %s --out_path %s"
               % (image_paths_path, proto_path, model_path, out_path))

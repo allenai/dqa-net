@@ -6,7 +6,7 @@ from tensorflow.models.rnn import rnn_cell
 from tensorflow.python.ops import rnn
 
 import nn
-from models.base_model_01 import BaseModel
+from models.base_model_02 import BaseModel
 
 
 class Sentence(object):
@@ -218,7 +218,7 @@ class AttentionModel(BaseModel):
         with tf.name_scope('ph'):
             self.s = Sentence([N, C, J], 's')
             self.m = Memory(params)
-            self.image = tf.placeholder('float', [N, M], name='i')
+            self.image = tf.placeholder('float', [N, G], name='i')
             self.y = tf.placeholder('int8', [N, C], name='y')
 
         with tf.variable_scope('first_u'):
@@ -287,7 +287,7 @@ class AttentionModel(BaseModel):
         m = self._prepro_relations_batch(relations_batch)
         g = self._prepro_images_batch(images_batch)
         y_batch = self._prepro_label_batch(label_batch)
-        feed_dict = {self.y: y_batch}
+        feed_dict = {self.y: y_batch, self.image: g}
         self.s.add(feed_dict, *s)
         self.m.add(feed_dict, *m)
         return feed_dict
