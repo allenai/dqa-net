@@ -25,8 +25,8 @@ def get_args():
     parser.add_argument("target_dir")
     parser.add_argument("--min_count", type=int, default=5)
     parser.add_argument("--train_dir", default="")
-    parser.add_argument("--vgg_model_path", default="~/vgg-19.caffemodel")
-    parser.add_argument("--vgg_proto_path", default="~/vgg-19.prototxt")
+    parser.add_argument("--vgg_model_path", default="~/caffe-models/vgg-19.caffemodel")
+    parser.add_argument("--vgg_proto_path", default="~/caffe-models/vgg-19.prototxt")
     return parser.parse_args()
 
 
