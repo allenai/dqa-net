@@ -102,7 +102,18 @@ def qa2hypo_test(args):
         test_patterns([q_type], question)
         sent = rule_based_transform(question, ans, q_type)
         sent_parse = loads(server.parse(sent))
-        print "Parse:", sent_parse
+        parse_tree = sent_parse['sentences'][0]['parsetree']
+        print "Parse Tree:", parse_tree
+        tree = Tree.fromstring(parse_tree)
+
+        print "NP:"
+        for subtree in tree.subtrees(filter=lambda x: x.label() == 'NP'):
+            print(subtree)
+
+        print "VP:"
+        for subtree in tree.subtrees(filter=lambda x: x.label() == 'VP'):
+            print(subtree)
+
         
         print 'Result:', sent
         res.append({'Question':question, 'Answer':ans, 'Result':sent})
