@@ -4,6 +4,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.models.rnn import rnn_cell
 from tensorflow.python.ops import rnn
+from pprint import pprint
 
 import nn
 from models.base_model_02 import BaseModel
@@ -246,7 +247,7 @@ class AttentionModel(BaseModel):
         with tf.variable_scope('yp'):
             image_logit = tf.squeeze(tf.batch_matmul(last_layer.u, aug_g), [2])  # [N, C]
             memory_logit = tf.reduce_sum(last_layer.u * last_layer.o, 2)  # [N, C]
-            self.logit = image_logit + memory_logit
+            self.logit = memory_logit
             self.yp = tf.nn.softmax(self.logit, name='yp')
 
         with tf.name_scope('loss') as loss_scope:
@@ -293,7 +294,11 @@ class AttentionModel(BaseModel):
         return feed_dict
 
     def _prepro_images_batch(self, images_batch):
-        return images_batch
+        params = self.params
+        N, G = params.batch_size, params.image_size
+        g = np.zeros([N, G])
+        g[:len(images_batch)] = images_batch
+        return g
 
     def _prepro_sents_batch(self, sents_batch):
         p = self.params
