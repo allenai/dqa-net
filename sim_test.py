@@ -6,6 +6,7 @@ import itertools
 from collections import defaultdict
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from utils import get_pbar
 
@@ -42,7 +43,7 @@ def sim_test(args):
         pbar.update(i)
         i += 1
     pbar.finish()
-    json.dump(diff_dict, open("diff_dict.json", "r"))
+    json.dump(diff_dict, open("diff_dict.json", "w"))
 
 def sent_to_text(vocab, sent):
     return " ".join(vocab[idx] for idx in sent)
@@ -52,6 +53,13 @@ def sent_to_bow(sent, l):
     for idx in sent:
         out[idx] = 1.0
     return out
+
+def temp():
+    a = {"0.0": 128, "1.0": 61, "2.0": 181, "3.0": 152, "4.0": 170, "5.0": 144, "6.0": 128, "7.0": 120, "8.0": 70, "9.0": 50, "10.0": 44, "11.0": 22, "12.0": 19, "13.0": 17, "14.0": 3, "15.0": 4, "16.0": 3, "18.0": 2, "22.0": 1, "24.0": 1, "27.0": 1}
+    keys = map(int, a.keys())
+    plt.plot(keys, [a[key] for key in keys])
+
+
 
 def diff(sent1, sent2, l):
     return np.sum(np.abs(sent_to_bow(sent1, l) - sent_to_bow(sent2, l)))

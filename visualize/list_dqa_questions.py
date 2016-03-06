@@ -73,7 +73,7 @@ def list_dqa_questions(args):
                 rows.append(row)
 
         if i % args.num_im == 0:
-            html_path = os.path.join(html_dir, "%s.html" % str(image_id).zfill(8))
+            html_path = os.path.join(html_dir, "%s.visualize" % str(image_id).zfill(8))
 
         if (i + 1) % args.num_im == 0 or (i + 1) == len(image_names):
             var_dict = {'title': "Question List",
@@ -100,7 +100,7 @@ def list_dqa_questions(args):
     httpd = SocketServer.TCPServer((host, port), handler)
     if args.open == 'True':
         os.system("open http://%s:%d" % (args.host, args.port))
-    print "serving at %s:%d" % (host, port)
+    print("serving at %s:%d" % (host, port))
     httpd.serve_forever()
 
 
