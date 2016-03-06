@@ -54,12 +54,12 @@ def read_data(name, params, data_dir):
     id_map_path = os.path.join(data_dir, "id_map.json")
     image_ids_path = os.path.join(data_dir, "image_ids.json")
 
-    sents_dict = json.load(open(sents_path, "rb"))
-    relations_dict = json.load(open(relations_path, "rb"))
-    answer_dict = json.load(open(answers_path, "rb"))
+    sents_dict = json.load(open(sents_path, "r"))
+    relations_dict = json.load(open(relations_path, "r"))
+    answer_dict = json.load(open(answers_path, "r"))
     images_h5 = h5py.File(images_path, 'r')
-    id_map = json.load(open(id_map_path, "rb"))
-    image_ids =json.load(open(image_ids_path, 'rb'))
+    id_map = json.load(open(id_map_path, "r"))
+    image_ids =json.load(open(image_ids_path, 'r'))
     image_id_map = {id_: idx for idx, id_ in enumerate(image_ids)}
 
     batch_size = params.batch_size

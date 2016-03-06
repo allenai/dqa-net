@@ -112,10 +112,10 @@ def prepro_annos(args):
     data_dir = args.data_dir
     target_dir = args.target_dir
     vocab_path = os.path.join(target_dir, "vocab.json")
-    vocab = json.load(open(vocab_path, "rb"))
+    vocab = json.load(open(vocab_path, "r"))
     relations_path = os.path.join(target_dir, "image_relations.json")
     meta_data_path = os.path.join(target_dir, "meta_data.json")
-    meta_data = json.load(open(meta_data_path, "rb"))
+    meta_data = json.load(open(meta_data_path, "r"))
 
     meta_data['pred_size'] = 2 * 4
 
@@ -138,7 +138,7 @@ def prepro_annos(args):
         image_name, _ = os.path.splitext(anno_name)
         image_id, _ = os.path.splitext(image_name)
         anno_path = os.path.join(annos_dir, anno_name)
-        anno = json.load(open(anno_path, "rb"))
+        anno = json.load(open(anno_path, "r"))
         relations = []
         if 'relationships' not in anno:
             relations_dict[image_id] = relations
@@ -204,9 +204,9 @@ def prepro_questions(args):
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     image_relations_path = os.path.join(target_dir, "image_relations.json")
     relations_path = os.path.join(target_dir, "relations.json")
-    vocab = json.load(open(vocab_path, "rb"))
-    meta_data = json.load(open(meta_data_path, "rb"))
-    image_relations_dict = json.load(open(image_relations_path, "rb"))
+    vocab = json.load(open(vocab_path, "r"))
+    meta_data = json.load(open(meta_data_path, "r"))
+    image_relations_dict = json.load(open(image_relations_path, "r"))
 
     sents_dict = {}
     answer_dict = {}
@@ -232,7 +232,7 @@ def prepro_questions(args):
         image_path = os.path.join(images_dir, image_name)
         assert os.path.exists(anno_path), "%s does not exist." % anno_path
         assert os.path.exists(image_path), "%s does not exist." % image_path
-        ques = json.load(open(ques_path, "rb"))
+        ques = json.load(open(ques_path, "r"))
         for ques_text, d in ques['questions'].iteritems():
             """
             ques_words = _tokenize(ques_text)
@@ -277,7 +277,7 @@ def build_vocab(args):
     if args.train_dir:
         vocab_path = os.path.join(args.train_dir, "vocab.json")
         new_vocab_path = os.path.join(args.target_dir, "vocab.json")
-        print "using vocab from %s" % vocab_path
+        print("using vocab from %s" % vocab_path)
         shutil.copy(vocab_path, new_vocab_path)
         return
     data_dir = args.data_dir
@@ -296,7 +296,7 @@ def build_vocab(args):
             pbar.update(i)
             continue
         anno_path = os.path.join(annos_dir, anno_name)
-        anno = json.load(open(anno_path, "rb"))
+        anno = json.load(open(anno_path, "r"))
         for _, d in anno['text'].iteritems():
             text = d['value']
             for word in _tokenize(text):
@@ -312,7 +312,7 @@ def build_vocab(args):
             pbar.update(i)
             continue
         ques_path = os.path.join(questions_dir, ques_name)
-        ques = json.load(open(ques_path, "rb"))
+        ques = json.load(open(ques_path, "r"))
         for ques_text, d in ques['questions'].iteritems():
             for word in _tokenize(ques_text):
                 _vadd(vocab_counter, word)

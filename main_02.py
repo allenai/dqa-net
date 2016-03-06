@@ -68,9 +68,9 @@ def main(_):
         FLAGS.train_num_batches = train_ds.num_batches
         FLAGS.val_num_batches = FLAGS.val_num_batches
         train_meta_data_path = os.path.join(FLAGS.train_data_dir, "meta_data.json")
-        train_meta_data = json.load(open(train_meta_data_path, "rb"))
+        train_meta_data = json.load(open(train_meta_data_path, "r"))
         val_meta_data_path = os.path.join(FLAGS.val_data_dir, "meta_data.json")
-        val_meta_data = json.load(open(val_meta_data_path, "rb"))
+        val_meta_data = json.load(open(val_meta_data_path, "r"))
         meta_data = combine_meta_data(train_meta_data, val_meta_data)
         vocab_path = os.path.join(FLAGS.train_data_dir, "vocab.json")
         if not os.path.exists(FLAGS.save_dir):
@@ -79,7 +79,7 @@ def main(_):
         test_ds = read_data('test', FLAGS, FLAGS.test_data_dir)
         FLAGS.test_num_batches = test_ds.num_batches
         meta_data_path = os.path.join(FLAGS.test_data_dir, "meta_data.json")
-        meta_data = json.load(open(meta_data_path, "rb"))
+        meta_data = json.load(open(meta_data_path, "r"))
         vocab_path = os.path.join(FLAGS.test_data_dir, "vocab.json")
 
     # Other parameters
@@ -88,7 +88,7 @@ def main(_):
     FLAGS.max_num_rels = meta_data['max_num_rels']
     FLAGS.pred_size = meta_data['pred_size']
     FLAGS.num_choices = meta_data['num_choices']
-    vocab = json.load(open(vocab_path, "rb"))
+    vocab = json.load(open(vocab_path, "r"))
     FLAGS.vocab_size = len(vocab)
 
     # For quick draft build (deubgging).
