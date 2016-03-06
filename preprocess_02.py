@@ -377,7 +377,7 @@ if __name__ == "__main__":
     ARGS = get_args()
     create_meta_data(ARGS)
     create_image_ids_and_paths(ARGS)
-    # prepro_images(ARGS)
+    prepro_images(ARGS)
     build_vocab(ARGS)
     prepro_annos(ARGS)
     prepro_questions(ARGS)
