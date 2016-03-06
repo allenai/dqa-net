@@ -273,7 +273,7 @@ def build_vocab(args):
     if args.train_dir:
         vocab_path = os.path.join(args.train_dir, "vocab.json")
         new_vocab_path = os.path.join(args.target_dir, "vocab.json")
-        print "using vocab from %s" % vocab_path
+        print("using vocab from %s" % vocab_path)
         shutil.copy(vocab_path, new_vocab_path)
         return
     data_dir = args.data_dir
