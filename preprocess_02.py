@@ -77,7 +77,7 @@ def _get_center(anno, key):
         return _get_center(anno, new_key)
     shape = poly_dict[key[0]]
     poly = np.array(anno[type_][key][shape])
-    center = map(int, map(round, np.mean(poly, 0)))
+    center = list(map(int, map(round, np.mean(poly, 0))))
     return center
 
 
@@ -377,7 +377,7 @@ if __name__ == "__main__":
     ARGS = get_args()
     create_meta_data(ARGS)
     create_image_ids_and_paths(ARGS)
-    prepro_images(ARGS)
+    # prepro_images(ARGS)
     build_vocab(ARGS)
     prepro_annos(ARGS)
     prepro_questions(ARGS)
