@@ -13,9 +13,9 @@ flags = tf.app.flags
 # File directories
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
 flags.DEFINE_string("save_dir", "save", "Save directory [save]")
-flags.DEFINE_string("train_data_dir", 'data/1500r-train', "Train data directory [data/1500-train]")
-flags.DEFINE_string("val_data_dir", 'data/1500r-test', "Val data directory [data/1500-test]")
-flags.DEFINE_string("test_data_dir", 'data/1500r-test', "Test data directory [data/1500-test]")
+flags.DEFINE_string("train_data_dir", 'data/1500o-train', "Train data directory [data/1500-train]")
+flags.DEFINE_string("val_data_dir", 'data/1500o-test', "Val data directory [data/1500-test]")
+flags.DEFINE_string("test_data_dir", 'data/1500o-test', "Test data directory [data/1500-test]")
 flags.DEFINE_string("eval_dir", "eval", "Eval value storing directory [eval]")
 
 # Training parameters

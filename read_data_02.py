@@ -17,7 +17,7 @@ class DataSet(object):
         self.include_leftover = include_leftover
         self.idxs = idxs
         self.num_examples = len(idxs)
-        self.num_batches = self.num_examples / self.batch_size + int(self.include_leftover)
+        self.num_batches = int(self.num_examples / self.batch_size) + int(self.include_leftover)
         self.reset()
 
     def get_next_labeled_batch(self):
@@ -71,7 +71,7 @@ def read_data(name, params, data_dir):
     images = [images_h5['data'][image_id_map[id_map[id_]]] for id_ in question_ids]
 
     data = [sentss, relationss, images, answers]
-    idxs = range(len(question_ids))
+    idxs = np.arange(len(question_ids))
     include_leftover = not params.train
     data_set = DataSet(name, batch_size, data, idxs, include_leftover=include_leftover)
     return data_set

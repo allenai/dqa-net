@@ -1,4 +1,5 @@
 from operator import mul
+from functools import reduce
 
 import tensorflow as tf
 import numpy as np
@@ -228,7 +229,7 @@ class AttentionModel(BaseModel):
 
         layers = []
         prev_layer = None
-        for layer_index in xrange(params.num_layers):
+        for layer_index in range(params.num_layers):
             with tf.variable_scope('layer_%d' % layer_index):
                 if prev_layer:
                     cur_layer = Layer(params, self.m, prev_layer=prev_layer)
