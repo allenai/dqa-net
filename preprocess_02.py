@@ -144,11 +144,11 @@ def prepro_annos(args):
             relations_dict[image_id] = relations
             pbar.update(i)
             continue
-        for rel_type, d in anno['relationships'].iteritems():
-            for rel_subtype, dd in d.iteritems():
+        for rel_type, d in anno['relationships'].items():
+            for rel_subtype, dd in d.items():
                 if len(dd) == 0:
                     continue
-                for rel_key, ddd in dd.iteritems():
+                for rel_key, ddd in dd.items():
                     category = ddd['category']
                     # FIXME : just choose one for now
                     origin_key = ddd['origin'][0]
@@ -185,8 +185,8 @@ def prepro_annos(args):
     print('max label size: %d' % max_label_size)
     print("max num rels: %d" % max_num_rels)
     print("dumping json file ... ")
-    json.dump(relations_dict, open(relations_path, 'wb'))
-    json.dump(meta_data, open(meta_data_path, 'wb'))
+    json.dump(relations_dict, open(relations_path, 'w'))
+    json.dump(meta_data, open(meta_data_path, 'w'))
     print("done")
 
 
@@ -233,7 +233,7 @@ def prepro_questions(args):
         assert os.path.exists(anno_path), "%s does not exist." % anno_path
         assert os.path.exists(image_path), "%s does not exist." % image_path
         ques = json.load(open(ques_path, "r"))
-        for ques_text, d in ques['questions'].iteritems():
+        for ques_text, d in ques['questions'].items():
             """
             ques_words = _tokenize(ques_text)
             choice_wordss = [_tokenize(choice) for choice in d['answerTexts']]
@@ -264,12 +264,12 @@ def prepro_questions(args):
     print("number of choices: %d" % num_choices)
     print("max sent size: %d" % max_sent_size)
     print("dumping json file ... ")
-    json.dump(sents_dict, open(sents_path, "wb"))
-    json.dump(answer_dict, open(answer_path, "wb"))
-    json.dump(id_map, open(id_map_path, "wb"))
-    json.dump(meta_data, open(meta_data_path, "wb"))
-    json.dump(replaced, open(replaced_path, "wb"))
-    json.dump(relations_dict, open(relations_path, "wb"))
+    json.dump(sents_dict, open(sents_path, "w"))
+    json.dump(answer_dict, open(answer_path, "w"))
+    json.dump(id_map, open(id_map_path, "w"))
+    json.dump(meta_data, open(meta_data_path, "w"))
+    json.dump(replaced, open(replaced_path, "w"))
+    json.dump(relations_dict, open(relations_path, "w"))
     print("done")
 
 
@@ -297,7 +297,7 @@ def build_vocab(args):
             continue
         anno_path = os.path.join(annos_dir, anno_name)
         anno = json.load(open(anno_path, "r"))
-        for _, d in anno['text'].iteritems():
+        for _, d in anno['text'].items():
             text = d['value']
             for word in _tokenize(text):
                 _vadd(vocab_counter, word)
@@ -313,7 +313,7 @@ def build_vocab(args):
             continue
         ques_path = os.path.join(questions_dir, ques_name)
         ques = json.load(open(ques_path, "r"))
-        for ques_text, d in ques['questions'].iteritems():
+        for ques_text, d in ques['questions'].items():
             for word in _tokenize(ques_text):
                 _vadd(vocab_counter, word)
             for choice in d['answerTexts']:
@@ -322,7 +322,7 @@ def build_vocab(args):
         pbar.update(i)
     pbar.finish()
 
-    vocab_list, counts = zip(*sorted([pair for pair in vocab_counter.iteritems() if pair[1] > min_count],
+    vocab_list, counts = zip(*sorted([pair for pair in vocab_counter.items() if pair[1] > min_count],
                              key=lambda x: -x[1]))
 
     freq = 5
@@ -334,7 +334,7 @@ def build_vocab(args):
     vocab_dict['UNK'] = 0
     print("vocab size: %d" % len(vocab_dict))
     print ("dumping json file ... ")
-    json.dump(vocab_dict, open(vocab_path, "wb"))
+    json.dump(vocab_dict, open(vocab_path, "w"))
     print ("done")
 
 
@@ -344,7 +344,7 @@ def create_meta_data(args):
         os.mkdir(target_dir)
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     meta_data = {'data_dir': args.data_dir}
-    json.dump(meta_data, open(meta_data_path, "wb"))
+    json.dump(meta_data, open(meta_data_path, "w"))
 
 
 def create_image_ids_and_paths(args):
@@ -359,8 +359,8 @@ def create_image_ids_and_paths(args):
     ordered_image_names = ["%s.png" % id_ for id_ in ordered_image_ids]
     print ("dumping json files ... ")
     image_paths = [os.path.join(images_dir, name) for name in ordered_image_names]
-    json.dump(ordered_image_ids, open(image_ids_path, "wb"))
-    json.dump(image_paths, open(image_paths_path, "wb"))
+    json.dump(ordered_image_ids, open(image_ids_path, "w"))
+    json.dump(image_paths, open(image_paths_path, "w"))
     print ("done")
 
 
