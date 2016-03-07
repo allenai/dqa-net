@@ -343,9 +343,10 @@ def prepro_images(args):
 def copy_folds(args):
     data_dir = args.data_dir
     target_dir = args.target_dir
-    from_folds_path = os.path.join(data_dir, "folds.json")
-    to_folds_path = os.path.join(target_dir, "folds.json")
-    shutil.copy(from_folds_path, to_folds_path)
+    for num in range(1,6):
+        from_folds_path = os.path.join(data_dir, "fold%d.json" % num)
+        to_folds_path = os.path.join(target_dir, "fold%d.json" % num)
+        shutil.copy(from_folds_path, to_folds_path)
 
 
 if __name__ == "__main__":

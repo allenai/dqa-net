@@ -48,11 +48,9 @@ def read_data(params, mode):
     print("loading %s data ... ", end="")
     data_dir = params.data_dir
 
-    folds_path = os.path.join(data_dir, 'folds.json')
-    folds_d = json.load(open(folds_path, 'r'))
-    fold_num = str(params.fold)
-    folds = folds_d[fold_num]
-    cur_image_ids = folds[mode]
+    fold_path = params.fold_path
+    fold = json.load(open(fold_path, 'r'))
+    cur_image_ids = fold[mode]
 
     sents_path = os.path.join(data_dir, "sents.json")
     relations_path = os.path.join(data_dir, "relations.json")

@@ -15,6 +15,7 @@ flags.DEFINE_string("log_dir", "log", "Log directory [log]")
 flags.DEFINE_string("save_dir", "save", "Save directory [save]")
 flags.DEFINE_string("eval_dir", "eval", "Eval value storing directory [eval]")
 flags.DEFINE_string("data_dir", "data/shining3", "Data directory [data/shining3]")
+flags.DEFINE_string("fold_path", "data/shining3/fold1.json", "fold json path [data/shining3/fond1.json]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
