@@ -28,6 +28,7 @@ def get_args():
     parser.add_argument("--vgg_proto_path", default="~/caffe-models/vgg-19.prototxt")
     return parser.parse_args()
 
+STEM = False
 
 def _tokenize(raw):
     tokens = re.findall(r"[\w]+", raw)
@@ -36,13 +37,15 @@ def _tokenize(raw):
 
 def _vadd(vocab_counter, word):
     word = word.lower()
-    word = stemmer.stem(word)
+    if STEM:
+        word = stemmer.stem(word)
     vocab_counter[word] += 1
 
 
 def _vget(vocab_dict, word):
     word = word.lower()
-    word = stemmer.stem(word)
+    if STEM:
+        word = stemmer.stem(word)
     return vocab_dict[word] if word in vocab_dict else 0
 
 
@@ -360,4 +363,4 @@ if __name__ == "__main__":
     build_vocab(ARGS)
     prepro_annos(ARGS)
     prepro_questions(ARGS)
-    prepro_images(ARGS)
+    # prepro_images(ARGS)
