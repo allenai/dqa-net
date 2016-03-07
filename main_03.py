@@ -5,8 +5,10 @@ import os
 
 import tensorflow as tf
 
+from configs.get_config import get_config
 from models.attention_model_03 import AttentionModel
 from read_data_03 import read_data
+from configs.version_03 import configs
 
 flags = tf.app.flags
 
@@ -31,6 +33,7 @@ flags.DEFINE_float("anneal_ratio", 0.5, "Anneal ratio [0.5")
 flags.DEFINE_integer("num_epochs", 200, "Total number of epochs for training [200]")
 flags.DEFINE_boolean("linear_start", False, "Start training with linear model? [False]")
 flags.DEFINE_float("max_grad_norm", 40, "Max grad norm; above this number is clipped [40]")
+flags.DEFINE_float("keep_prob", 0.5, "Keep probability of dropout [0.5]")
 
 # Training and testing options
 flags.DEFINE_boolean("train", False, "Train? Test if False [False]")
@@ -40,6 +43,7 @@ flags.DEFINE_boolean("progress", True, "Show progress? [True]")
 flags.DEFINE_boolean("gpu", False, 'Enable GPU? (Linux only) [False]')
 flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
+flags.DEFINE_integer("config", -1, "Config number to load. -1 to use currently defined config. [-1]")
 
 # Debugging
 flags.DEFINE_boolean("draft", False, "Draft? (quick build) [False]")
@@ -76,6 +80,11 @@ def main(_):
     FLAGS.pred_size = meta_data['pred_size']
     FLAGS.num_choices = meta_data['num_choices']
     FLAGS.vocab_size = meta_data['vocab_size']
+    FLAGS.main_name = __name__
+
+    config_name = "Config%s" % str(FLAGS.config).zfill(2)
+    config_priority = 1
+    config_dict = configs[FLAGS.config]() if FLAGS.config >= 0 else {}
 
     # For quick draft build (deubgging).
     if FLAGS.draft:
@@ -87,16 +96,18 @@ def main(_):
         FLAGS.save_period = 1
         # TODO : Add any other parameter that induces a lot of computations
         FLAGS.num_layers = 1
+        config_priority = 0
 
-    pprint(FLAGS.__flags)
+    config = get_config(FLAGS.__flags, config_dict, config_name, priority=config_priority)
+    pprint(config._asdict)
 
     graph = tf.Graph()
-    model = AttentionModel(graph, FLAGS)
+    model = AttentionModel(graph, config)
     with tf.Session(graph=graph) as sess:
         sess.run(tf.initialize_all_variables())
-        if FLAGS.train:
-            writer = tf.train.SummaryWriter(FLAGS.log_dir, sess.graph_def)
-            if FLAGS.load:
+        if config.train:
+            writer = tf.train.SummaryWriter(config.log_dir, sess.graph_def)
+            if config.load:
                 model.load(sess)
             model.train(sess, writer, train_ds, val_ds)
         else:
