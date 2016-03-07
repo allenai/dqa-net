@@ -183,7 +183,7 @@ def prepro_annos(args):
     print("number of relations: %d" % sum(len(relations) for relations in relations_dict))
     print('max label size: %d' % max_label_size)
     print("max num rels: %d" % max_num_rels)
-    print("dumping json file ... ")
+    print("dumping json file ... ", end="")
     json.dump(relations_dict, open(relations_path, 'w'))
     json.dump(meta_data, open(meta_data_path, 'w'))
     print("done")
@@ -232,7 +232,7 @@ def prepro_questions(args):
     meta_data['max_sent_size'] = max_sent_size
     meta_data['num_choices'] = num_choices
 
-    print("number of questions: %d" % len(num_questions))
+    print("number of questions: %d" % num_questions)
     print("number of choices: %d" % num_choices)
     print("max sent size: %d" % max_sent_size)
     print("dumping json file ... ", end="")
@@ -340,11 +340,20 @@ def prepro_images(args):
               % (image_paths_path, proto_path, model_path, out_path))
 
 
+def copy_folds(args):
+    data_dir = args.data_dir
+    target_dir = args.target_dir
+    from_folds_path = os.path.join(data_dir, "folds.json")
+    to_folds_path = os.path.join(target_dir, "folds.json")
+    shutil.copy(from_folds_path, to_folds_path)
+
+
 if __name__ == "__main__":
     ARGS = get_args()
     create_meta_data(ARGS)
     create_image_ids_and_paths(ARGS)
     # prepro_images(ARGS)
+    copy_folds(ARGS)
     build_vocab(ARGS)
     prepro_annos(ARGS)
     prepro_questions(ARGS)
