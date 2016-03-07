@@ -3,6 +3,7 @@ import os
 import random
 import argparse
 
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("data_dir")
@@ -10,6 +11,7 @@ def get_args():
     parser.add_argument("--ratio", type=float, default=0.8)
     parser.add_argument("--shuffle", default="False")
     return parser.parse_args()
+
 
 def create_fold(args):
     data_dir = args.data_dir
@@ -19,8 +21,9 @@ def create_fold(args):
     shuffle = args.shuffle == 'True'
     fold_path = args.fold_path
     annotation_names = set(os.path.splitext(name)[0] for name in os.listdir(annotations_dir) if name.endswith(".json"))
-    image_ids = list(sorted([os.path.splitext(name)[0] for name in os.listdir(images_dir) if name.endswith(".png") and name in annotation_names],
-            key=lambda x: int(x)))
+    image_ids = list(sorted([os.path.splitext(name)[0]
+                             for name in os.listdir(images_dir) if name.endswith(".png") and name in annotation_names],
+                            key=lambda x: int(x)))
     if shuffle:
         random.shuffle(image_ids)
 

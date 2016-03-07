@@ -155,9 +155,6 @@ class RelationEncoder(object):
         return r
 
 
-
-
-
 class Layer(object):
     def __init__(self, params, memory, prev_layer=None, sent_encoder=None, u=None):
         assert isinstance(memory, Memory)

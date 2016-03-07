@@ -13,9 +13,9 @@ flags = tf.app.flags
 
 # File directories
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
-flags.DEFINE_string("model_name", "03_att", "Model name [model_03]")
-flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
-flags.DEFINE_string("fold_path", "data/s3/fold1.json", "fold json path [data/s3/fond1.json]")
+flags.DEFINE_string("model_name", "model_03", "Model name [model_03]")
+flags.DEFINE_string("data_dir", "data/s3-100", "Data directory [data/s3-100]")
+flags.DEFINE_string("fold_path", "data/s3-100/fold.json", "fold json path [data/s3-100/fold.json]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
@@ -41,7 +41,7 @@ flags.DEFINE_boolean("progress", True, "Show progress? [True]")
 flags.DEFINE_boolean("gpu", False, 'Enable GPU? (Linux only) [False]')
 flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
-flags.DEFINE_integer("config", -1, "Config number to load. -1 to use currently defined config. [-1]")
+flags.DEFINE_integer("config", 0, "Config number to load. 0 to use currently defined config. [0]")
 
 # Debugging
 flags.DEFINE_boolean("draft", False, "Draft? (quick build) [False]")
@@ -56,7 +56,7 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-    config_dict = configs[FLAGS.config]() if FLAGS.config >= 0 else {}
+    config_dict = configs[FLAGS.config] if FLAGS.config > 0 else {}
     config = get_config(FLAGS.__flags, config_dict, 1)
 
     meta_data_path = os.path.join(config.data_dir, "meta_data.json")
@@ -71,10 +71,15 @@ def main(_):
     config.vocab_size = meta_data['vocab_size']
     config.main_name = __name__
 
-    eval_dir = os.path.join(config.data_dir, "evals/%s" % config.model_name)
+    eval_dir = "evals/%s" % config.model_name
     eval_subdir = os.path.join(eval_dir, "config_%s" % str(config.config).zfill(2))
-    log_dir = os.path.join(config.data_dir, "logs/%s" % config.model_name)
+    log_dir = "logs/%s" % config.model_name
     log_subdir = os.path.join(log_dir, "config_%s" % str(config.config).zfill(2))
+    save_dir = "saves/%s" % config.model_name
+    save_subdir = os.path.join(save_dir, "config_%s" % str(config.config).zfill(2))
+    config.eval_dir = eval_subdir
+    config.log_dir = log_subdir
+    config.save_dir = save_subdir
 
     if not os.path.exists(eval_dir):
         os.mkdir(eval_dir)
@@ -94,8 +99,6 @@ def main(_):
         config.train_num_batches = train_ds.num_batches
         config.val_num_batches = min(config.val_num_batches, train_ds.num_batches, val_ds.num_batches)
 
-        save_dir = os.path.join(config.data_dir, "saves/%s" % config.model_name)
-        save_subdir = os.path.join(save_dir, "config_%s" % str(config.config).zfill(2))
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
         if not os.path.exists(save_subdir):
@@ -110,10 +113,11 @@ def main(_):
         config.val_num_batches = 1
         config.test_num_batches = 1
         config.num_epochs = 1
-        config.eval_period = 1
+        config.val_period = 1
         config.save_period = 1
         # TODO : Add any other parameter that induces a lot of computations
         config.num_layers = 1
+        config.rnn_num_layers = 1
 
     pprint(config.__dict__)
 
@@ -122,7 +126,7 @@ def main(_):
     with tf.Session(graph=graph) as sess:
         sess.run(tf.initialize_all_variables())
         if config.train:
-            writer = tf.train.SummaryWriter(config.log_subdir, sess.graph_def)
+            writer = tf.train.SummaryWriter(config.log_dir, sess.graph_def)
             if config.load:
                 model.load(sess)
             model.train(sess, writer, train_ds, val_ds)

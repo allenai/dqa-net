@@ -1,4 +1,4 @@
-config_00 = {'batch_size': 100,
+config_01 = {'batch_size': 100,
              'hidden_size': 4096,
              'num_layers': 3,
              'rnn_num_layers': 2,
@@ -12,4 +12,4 @@ config_00 = {'batch_size': 100,
              'max_grad_norm': 40,
              'keep_prob': 1.0}
 
-configs = {0: config_00}
+configs = {1: config_01}

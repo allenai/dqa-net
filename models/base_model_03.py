@@ -13,7 +13,7 @@ class BaseModel(object):
     def __init__(self, graph, params, name=None):
         self.graph = graph
         self.params = params
-        self.save_dir = params.save_subdir
+        self.save_dir = params.save_dir
         self.name = name or self.__class__.__name__
         self.initializer = tf.random_normal_initializer(params.init_mean, params.init_std)
         with graph.as_default(), tf.variable_scope(self.name, initializer=self.initializer):
