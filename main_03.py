@@ -86,7 +86,7 @@ def main(_):
     if not os.path.exists(eval_dir):
         os.mkdir(eval_dir)
     if os.path.exists(eval_subdir):
-        if not config.load:
+        if config.train and not config.load:
             shutil.rmtree(eval_subdir)
             os.mkdir(eval_subdir)
     else:
@@ -94,7 +94,7 @@ def main(_):
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
     if  os.path.exists(log_subdir):
-        if not config.load:
+        if config.train and not config.load:
             shutil.rmtree(log_subdir)
             os.mkdir(log_subdir)
     else:
