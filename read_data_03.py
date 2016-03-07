@@ -45,12 +45,15 @@ class DataSet(object):
 
 
 def read_data(params, mode):
-    print("loading %s data ... ", end="")
+    print("loading {} data ... ".format(mode), end="")
     data_dir = params.data_dir
 
     fold_path = params.fold_path
     fold = json.load(open(fold_path, 'r'))
-    cur_image_ids = fold[mode]
+    if mode in ['train', 'test']:
+        cur_image_ids = fold[mode]
+    elif mode == 'val':
+        cur_image_ids = fold['test']
 
     sents_path = os.path.join(data_dir, "sents.json")
     relations_path = os.path.join(data_dir, "relations.json")
@@ -66,11 +69,17 @@ def read_data(params, mode):
     image_id2idx = {id_: idx for idx, id_ in enumerate(all_image_ids)}
 
     batch_size = params.batch_size
-    sentss = [sents for image_id in cur_image_ids for sents in sentss_dict[image_id]]
-    answers = [answer for image_id in cur_image_ids for answer in answers_dict[image_id]]
-    # FIXME : to scale, this had to be fixed
-    relationss = [relation for image_id in cur_image_ids for relation in relations_dict[image_id]]
-    images = [images_h5['data'][image_id2idx[image_id]] for image_id in cur_image_ids for _ in sentss_dict[image_id]]
+    sentss, answers, relationss, images = [], [], [], []
+    for image_id in cur_image_ids:
+        if image_id not in sentss_dict:
+            continue
+        relations = relations_dict[image_id]
+        image = images_h5['data'][image_id2idx[image_id]]
+        for sents, answer in zip(sentss_dict[image_id], answers_dict[image_id]):
+            sentss.append(sents)
+            answers.append(answer)
+            relationss.append(relations)
+            images.append(image)
 
     data = [sentss, relationss, images, answers]
     idxs = np.arange(len(answers))

@@ -57,8 +57,9 @@ def _get_text(vocab_dict, anno, key):
         return _vlup(vocab_dict, _tokenize(value)), _vlup(vocab_dict, _tokenize(repText))
     elif key[0] == 'O':
         if 'text' in anno['objects'][key]:
-            new_key = anno['objects'][key]['text'][0]
-            return _get_text(vocab_dict, anno, new_key)
+            if len(anno['objects'][key]['text']) > 0:
+                new_key = anno['objects'][key]['text'][0]
+                return _get_text(vocab_dict, anno, new_key)
     return [], []
 
 
@@ -81,7 +82,7 @@ def _get_center(anno, key):
 
 
 def _get_head_center(anno, arrow_key):
-    if len(anno['arrows'][arrow_key]['arrowHeads']) == 0:
+    if 'arrowHeads' not in anno['arrows'][arrow_key] or len(anno['arrows'][arrow_key]['arrowHeads']) == 0:
         return [0, 0]
     head_key = anno['arrows'][arrow_key]['arrowHeads'][0]
     return _get_center(anno, head_key)
@@ -112,7 +113,7 @@ def prepro_annos(args):
     target_dir = args.target_dir
     vocab_path = os.path.join(target_dir, "vocab.json")
     vocab = json.load(open(vocab_path, "r"))
-    relations_path = os.path.join(target_dir, "image_relations.json")
+    relations_path = os.path.join(target_dir, "relations.json")
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     meta_data = json.load(open(meta_data_path, "r"))
 
@@ -128,7 +129,7 @@ def prepro_annos(args):
                       ('intraObject', 'textLinkage', 'textDescription'): 3}
 
     annos_dir = os.path.join(data_dir, "annotations")
-    anno_names = os.listdir(annos_dir)
+    anno_names = [name for name in os.listdir(annos_dir) if name.endswith(".json")]
     max_label_size = 0
     max_num_rels = 0
     pbar = get_pbar(len(anno_names))
@@ -137,7 +138,7 @@ def prepro_annos(args):
         image_name, _ = os.path.splitext(anno_name)
         image_id, _ = os.path.splitext(image_name)
         anno_path = os.path.join(annos_dir, anno_name)
-        anno = json.load(open(anno_path, "r"))
+        anno = json.load(open(anno_path, "r", encoding="ISO-8859-1"))
         relations = []
         if 'relationships' not in anno:
             relations_dict[image_id] = relations
@@ -217,6 +218,8 @@ def prepro_questions(args):
         ques_path = os.path.join(questions_dir, ques_name)
         ques = json.load(open(ques_path, "r"))
         for ques_id, (ques_text, d) in enumerate(ques['questions'].items()):
+            if d['abcLabel']:
+                continue
             sents = [_vlup(vocab, _tokenize(qa2hypo(ques_text, choice))) for choice in d['answerTexts']]
             assert not num_choices or num_choices == len(sents), "number of choices don't match: %s" % ques_name
             num_choices = len(sents)
@@ -353,8 +356,8 @@ if __name__ == "__main__":
     ARGS = get_args()
     create_meta_data(ARGS)
     create_image_ids_and_paths(ARGS)
-    # prepro_images(ARGS)
     copy_folds(ARGS)
     build_vocab(ARGS)
     prepro_annos(ARGS)
     prepro_questions(ARGS)
+    prepro_images(ARGS)

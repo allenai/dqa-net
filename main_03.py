@@ -5,7 +5,7 @@ import os
 
 import tensorflow as tf
 
-from models.attention_model_02 import AttentionModel
+from models.attention_model_03 import AttentionModel
 from read_data_03 import read_data
 
 flags = tf.app.flags
@@ -14,8 +14,8 @@ flags = tf.app.flags
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
 flags.DEFINE_string("save_dir", "save", "Save directory [save]")
 flags.DEFINE_string("eval_dir", "eval", "Eval value storing directory [eval]")
-flags.DEFINE_string("data_dir", "data/shining3", "Data directory [data/shining3]")
-flags.DEFINE_string("fold_path", "data/shining3/fold1.json", "fold json path [data/shining3/fond1.json]")
+flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
+flags.DEFINE_string("fold_path", "data/s3/fold1.json", "fold json path [data/s3/fond1.json]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
@@ -55,7 +55,7 @@ FLAGS = flags.FLAGS
 
 def main(_):
     meta_data_path = os.path.join(FLAGS.data_dir, "meta_data.json")
-    meta_data = json.load(open(meta_data_path, "rb"))
+    meta_data = json.load(open(meta_data_path, "r"))
     if not os.path.exists(FLAGS.eval_dir):
         os.mkdir(FLAGS.eval_dir)
     if FLAGS.train:
