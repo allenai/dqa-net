@@ -1,5 +1,4 @@
 import json
-from copy import deepcopy
 from pprint import pprint
 import os
 
@@ -8,14 +7,13 @@ import tensorflow as tf
 from configs.get_config import get_config
 from models.attention_model_03 import AttentionModel
 from read_data_03 import read_data
-from configs.version_03 import configs
+from configs.model_03_config import configs
 
 flags = tf.app.flags
 
 # File directories
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
-flags.DEFINE_string("save_dir", "save", "Save directory [save]")
-flags.DEFINE_string("eval_dir", "eval", "Eval value storing directory [eval]")
+flags.DEFINE_string("model_name", "03_att", "Model name [model_03]")
 flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
 flags.DEFINE_string("fold_path", "data/s3/fold1.json", "fold json path [data/s3/fond1.json]")
 
@@ -33,7 +31,7 @@ flags.DEFINE_float("anneal_ratio", 0.5, "Anneal ratio [0.5")
 flags.DEFINE_integer("num_epochs", 200, "Total number of epochs for training [200]")
 flags.DEFINE_boolean("linear_start", False, "Start training with linear model? [False]")
 flags.DEFINE_float("max_grad_norm", 40, "Max grad norm; above this number is clipped [40]")
-flags.DEFINE_float("keep_prob", 0.5, "Keep probability of dropout [0.5]")
+flags.DEFINE_float("keep_prob", 0.5, "Keep probability of dropout [1.0]")
 
 # Training and testing options
 flags.DEFINE_boolean("train", False, "Train? Test if False [False]")
@@ -58,55 +56,73 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-    meta_data_path = os.path.join(FLAGS.data_dir, "meta_data.json")
+    config_dict = configs[FLAGS.config]() if FLAGS.config >= 0 else {}
+    config = get_config(FLAGS.__flags, config_dict, 1)
+
+    meta_data_path = os.path.join(config.data_dir, "meta_data.json")
     meta_data = json.load(open(meta_data_path, "r"))
-    if not os.path.exists(FLAGS.eval_dir):
-        os.mkdir(FLAGS.eval_dir)
-    if FLAGS.train:
-        train_ds = read_data(FLAGS, 'train')
-        val_ds = read_data(FLAGS, 'val')
-        FLAGS.train_num_batches = train_ds.num_batches
-        FLAGS.val_num_batches = min(FLAGS.val_num_batches, train_ds.num_batches, val_ds.num_batches)
-        if not os.path.exists(FLAGS.save_dir):
-            os.mkdir(FLAGS.save_dir)
-    else:
-        test_ds = read_data(FLAGS, 'test')
-        FLAGS.test_num_batches = test_ds.num_batches
 
     # Other parameters
-    FLAGS.max_sent_size = meta_data['max_sent_size']
-    FLAGS.max_label_size = meta_data['max_label_size']
-    FLAGS.max_num_rels = meta_data['max_num_rels']
-    FLAGS.pred_size = meta_data['pred_size']
-    FLAGS.num_choices = meta_data['num_choices']
-    FLAGS.vocab_size = meta_data['vocab_size']
-    FLAGS.main_name = __name__
+    config.max_sent_size = meta_data['max_sent_size']
+    config.max_label_size = meta_data['max_label_size']
+    config.max_num_rels = meta_data['max_num_rels']
+    config.pred_size = meta_data['pred_size']
+    config.num_choices = meta_data['num_choices']
+    config.vocab_size = meta_data['vocab_size']
+    config.main_name = __name__
 
-    config_name = "Config%s" % str(FLAGS.config).zfill(2)
-    config_priority = 1
-    config_dict = configs[FLAGS.config]() if FLAGS.config >= 0 else {}
+    eval_dir = os.path.join(config.data_dir, "evals/%s" % config.model_name)
+    eval_subdir = os.path.join(eval_dir, "config_%s" % str(config.config).zfill(2))
+    log_dir = os.path.join(config.data_dir, "logs/%s" % config.model_name)
+    log_subdir = os.path.join(log_dir, "config_%s" % str(config.config).zfill(2))
+
+    if not os.path.exists(eval_dir):
+        os.mkdir(eval_dir)
+    if not os.path.exists(eval_subdir):
+        os.mkdir(eval_subdir)
+    if not os.path.exists(log_dir):
+        os.mkdir(log_dir)
+    """
+    # Not really needed
+    if not os.path.exists(log_subdir):
+        os.mkdir(log_subdir)
+    """
+
+    if config.train:
+        train_ds = read_data(config, 'train')
+        val_ds = read_data(config, 'val')
+        config.train_num_batches = train_ds.num_batches
+        config.val_num_batches = min(config.val_num_batches, train_ds.num_batches, val_ds.num_batches)
+
+        save_dir = os.path.join(config.data_dir, "saves/%s" % config.model_name)
+        save_subdir = os.path.join(save_dir, "config_%s" % str(config.config).zfill(2))
+        if not os.path.exists(save_dir):
+            os.mkdir(save_dir)
+        if not os.path.exists(save_subdir):
+            os.mkdir(save_subdir)
+    else:
+        test_ds = read_data(config, 'test')
+        config.test_num_batches = test_ds.num_batches
 
     # For quick draft build (deubgging).
-    if FLAGS.draft:
-        FLAGS.train_num_batches = 1
-        FLAGS.val_num_batches = 1
-        FLAGS.test_num_batches = 1
-        FLAGS.num_epochs = 1
-        FLAGS.eval_period = 1
-        FLAGS.save_period = 1
+    if config.draft:
+        config.train_num_batches = 1
+        config.val_num_batches = 1
+        config.test_num_batches = 1
+        config.num_epochs = 1
+        config.eval_period = 1
+        config.save_period = 1
         # TODO : Add any other parameter that induces a lot of computations
-        FLAGS.num_layers = 1
-        config_priority = 0
+        config.num_layers = 1
 
-    config = get_config(FLAGS.__flags, config_dict, config_name, priority=config_priority)
-    pprint(config._asdict)
+    pprint(config.__dict__)
 
     graph = tf.Graph()
     model = AttentionModel(graph, config)
     with tf.Session(graph=graph) as sess:
         sess.run(tf.initialize_all_variables())
         if config.train:
-            writer = tf.train.SummaryWriter(config.log_dir, sess.graph_def)
+            writer = tf.train.SummaryWriter(config.log_subdir, sess.graph_def)
             if config.load:
                 model.load(sess)
             model.train(sess, writer, train_ds, val_ds)
