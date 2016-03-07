@@ -66,7 +66,7 @@ def main(_):
         train_ds = read_data('train', FLAGS, FLAGS.train_data_dir)
         val_ds = read_data('val', FLAGS, FLAGS.val_data_dir)
         FLAGS.train_num_batches = train_ds.num_batches
-        FLAGS.val_num_batches = FLAGS.val_num_batches
+        FLAGS.val_num_batches = min(FLAGS.val_num_batches, train_ds.num_batches, val_ds.num_batches)
         train_meta_data_path = os.path.join(FLAGS.train_data_dir, "meta_data.json")
         train_meta_data = json.load(open(train_meta_data_path, "r"))
         val_meta_data_path = os.path.join(FLAGS.val_data_dir, "meta_data.json")
