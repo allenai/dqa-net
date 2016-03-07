@@ -255,9 +255,13 @@ class AttentionModel(BaseModel):
             # self.logit = tf.squeeze(tf.batch_matmul(last_layer.u + last_layer.o, aug_g), [2])  # [N, C]
             image_logit = tf.squeeze(tf.batch_matmul(first_u, aug_g), [2])  # [N, C]
             memory_logit = tf.reduce_sum(first_u * o_sum, 2)  # [N, C]
-            self.logit = image_logit + memory_logit
-            # self.fake_var = tf.get_variable('fake', shape=[d])
-            # self.logit = tf.reduce_sum(first_u, 2)
+            if params.mode == 'l':
+                self.fake_var = tf.get_variable('fake', shape=[d])
+                self.logit = tf.reduce_sum(first_u, 2)
+            elif params.mode == 'lc':
+                self.logit = image_logit
+            elif params.mode == 'lca':
+                self.logit = memory_logit + image_logit
             self.yp = tf.nn.softmax(self.logit, name='yp')
 
         with tf.name_scope('loss') as loss_scope:

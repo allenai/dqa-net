@@ -1,6 +1,7 @@
 import json
 from pprint import pprint
 import os
+import shutil
 
 import tensorflow as tf
 
@@ -14,24 +15,24 @@ flags = tf.app.flags
 # File directories
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
 flags.DEFINE_string("model_name", "model_03", "Model name [model_03]")
-flags.DEFINE_string("data_dir", "data/s3-100", "Data directory [data/s3-100]")
-flags.DEFINE_string("fold_path", "data/s3-100/fold.json", "fold json path [data/s3-100/fold.json]")
+flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
+flags.DEFINE_string("fold_path", "data/s3/fold6.json", "fold json path [data/s3/fold6.json]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
-flags.DEFINE_integer("hidden_size", 100, "Hidden size [50]")
+flags.DEFINE_integer("hidden_size", 100, "Hidden size [100]")
 flags.DEFINE_integer("image_size", 4096, "Image size [4096]")
 flags.DEFINE_integer("num_layers", 3, "Number of layers [3]")
 flags.DEFINE_integer("rnn_num_layers", 2, "Number of rnn layers [2]")
 flags.DEFINE_float("init_mean", 0, "Initial weight mean [0]")
 flags.DEFINE_float("init_std", 0.1, "Initial weight std [0.1]")
 flags.DEFINE_float("init_lr", 0.01, "Initial learning rate [0.01]")
-flags.DEFINE_integer("anneal_period", 100, "Anneal period [100]")
+flags.DEFINE_integer("anneal_period", 20, "Anneal period [20]")
 flags.DEFINE_float("anneal_ratio", 0.5, "Anneal ratio [0.5")
-flags.DEFINE_integer("num_epochs", 200, "Total number of epochs for training [200]")
+flags.DEFINE_integer("num_epochs", 50, "Total number of epochs for training [50]")
 flags.DEFINE_boolean("linear_start", False, "Start training with linear model? [False]")
 flags.DEFINE_float("max_grad_norm", 40, "Max grad norm; above this number is clipped [40]")
-flags.DEFINE_float("keep_prob", 0.5, "Keep probability of dropout [1.0]")
+flags.DEFINE_float("keep_prob", 0.5, "Keep probability of dropout [0.5]")
 
 # Training and testing options
 flags.DEFINE_boolean("train", False, "Train? Test if False [False]")
@@ -42,6 +43,7 @@ flags.DEFINE_boolean("gpu", False, 'Enable GPU? (Linux only) [False]')
 flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
 flags.DEFINE_integer("config", 0, "Config number to load. 0 to use currently defined config. [0]")
+flags.DEFINE_string("mode", "lc", "lc | lca [lc]")
 
 # Debugging
 flags.DEFINE_boolean("draft", False, "Draft? (quick build) [False]")
@@ -83,15 +85,20 @@ def main(_):
 
     if not os.path.exists(eval_dir):
         os.mkdir(eval_dir)
-    if not os.path.exists(eval_subdir):
+    if os.path.exists(eval_subdir):
+        if not config.load:
+            shutil.rmtree(eval_subdir)
+            os.mkdir(eval_subdir)
+    else:
         os.mkdir(eval_subdir)
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
-    """
-    # Not really needed
-    if not os.path.exists(log_subdir):
+    if  os.path.exists(log_subdir):
+        if not config.load:
+            shutil.rmtree(log_subdir)
+            os.mkdir(log_subdir)
+    else:
         os.mkdir(log_subdir)
-    """
 
     if config.train:
         train_ds = read_data(config, 'train')
@@ -101,8 +108,13 @@ def main(_):
 
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
-        if not os.path.exists(save_subdir):
+        if os.path.exists(save_subdir):
+            if not config.load:
+                shutil.rmtree(save_subdir)
+                os.mkdir(save_subdir)
+        else:
             os.mkdir(save_subdir)
+
     else:
         test_ds = read_data(config, 'test')
         config.test_num_batches = test_ds.num_batches
