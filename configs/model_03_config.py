@@ -10,6 +10,6 @@ config_00 = {'batch_size': 100,
              'num_epochs': 200,
              'linear_start': False,
              'max_grad_norm': 40,
-             'keep_prob': 0.5}
+             'keep_prob': 1.0}
 
 configs = {0: config_00}
