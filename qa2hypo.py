@@ -6,7 +6,7 @@ import random
 import re
 import string
 import sys
-from nltk.tree import Tree
+from nltk.tree import *
 
 
 def get_args():
@@ -24,17 +24,17 @@ AUX_V_DOES = ['can', 'could', 'dare', 'does', 'did', 'have', 'had', 'may', 'migh
 AUX_V_DOES_REGEX = '('+'|'.join(['('+AUX_V_DOES[i]+')' for i in range(len(AUX_V_DOES))])+')'
 AUX_V_DOESONLY = ['does', 'did']
 AUX_V_DOESONLY_REGEX = '('+'|'.join(['('+AUX_V_DOESONLY[i]+')' for i in range(len(AUX_V_DOESONLY))])+')'
-AUX_V_DO_REGEX = '(do)'
+AUX_V_DO_REGEX = '(do) '
 
 
 # global variables
 QUESTION_TYPES = ['__+', \
 '(when '+AUX_V_REGEX+'.*)|(when\?)', \
 '(where '+AUX_V_REGEX+'.*)|(where\?)', \
-'what', \
-'which', \
+'what ', \
+'which ', \
 '(whom '+AUX_V_REGEX+'.*)|(who '+AUX_V_REGEX+'.*)|(who\?)|(whom\?)', \
-'why', \
+'why ', \
 '(how many)|(how much)', \
 '(\Ahow [^(many)(much)])|(\W+how [^(many)(much)])', \
 '(name)|(choose)|(identify)', \
@@ -46,7 +46,7 @@ QUESTION_TYPES = ['__+', \
 # -1: don't sample randomly, sample by question type
 # 0: sample the inverse of all the question types
 # not -1 or 0: sample by question type
-SAMPLE_TYPE = 5
+SAMPLE_TYPE = -1
 # used when SAMPLE_TYPE == -1
 QUESTION_TYPE = 3
 
@@ -96,30 +96,20 @@ def qa2hypo_test(args):
         if k != -1:
             q_type = get_question_type(question)
 
-        print 'Question:', question
-        print 'Answer:', ans
+        if re.search('what '+AUX_V_DOESONLY_REGEX, question) or re.search('what '+AUX_V_DO_REGEX, question):
 
-        test_patterns([q_type], question)
-        sent = rule_based_transform(question, ans, q_type)
-        sent_parse = loads(server.parse(sent))
-        parse_tree = sent_parse['sentences'][0]['parsetree']
-        print "Parse Tree:", parse_tree
-        tree = Tree.fromstring(parse_tree)
+            print 'Question:', question
+            print
+            print 'Answer:', ans
 
-        print "NP:"
-        for subtree in tree.subtrees(filter=lambda x: x.label() == 'NP'):
-            print(subtree)
+            # test_patterns([q_type], question)
+            sent = rule_based_transform(question, ans, q_type)
+          
+            print 'Result:', sent
+            res.append({'Question':question, 'Answer':ans, 'Result':sent})
 
-        print "VP:"
-        for subtree in tree.subtrees(filter=lambda x: x.label() == 'VP'):
-            print(subtree)
-
-        
-        print 'Result:', sent
-        res.append({'Question':question, 'Answer':ans, 'Result':sent})
-
-        ctr += 1
-        print "--------------------------------------"
+            ctr += 1
+            print "--------------------------------------"
     
     print ctr
     print "Dumping json files ..."
@@ -178,16 +168,25 @@ def rule_based_transform(question, ans, q_type):
                 hypo = replace(question, s, e, ans)
 
         elif q_type == QUESTION_TYPES[3]:
-            s, e = test_pattern('what', question)
+            
             if re.search('what '+AUX_V_DOESONLY_REGEX, question):
-                s2, e2 = test_pattern('what '+AUX_V_DOESONLY_REGEX, question)
-                hypo = replace(question, s2, e2, '')
-                hypo = strip_nonalnum_re(hypo)+' '+ans
+                s_aux, e_aux, s_vp, e_vp, first_VP=find_np_pos(question, ans, 'what '+AUX_V_DOESONLY_REGEX, node_type='VP')
+                hypo = replace(question, e_vp, e_vp, ' '+ans)
+                print 'hypo:', hypo
+                hypo = replace(hypo, s_aux, e_aux, '')
+                hypo = strip_nonalnum_re(hypo)
+                
+                # hypo = strip_nonalnum_re(hypo)+' '+ans
             elif re.search('what '+AUX_V_DO_REGEX, question):
-                s3, e3 = test_pattern('what '+AUX_V_DO_REGEX, question)
-                hypo = replace(question, s3, e3, '')
-                hypo = strip_nonalnum_re(hypo)+' '+ans
+                s_aux, e_aux, s_vp, e_vp, first_VP=find_np_pos(question, ans, 'what '+AUX_V_DO_REGEX, node_type='VP')
+                hypo = replace(question, e_vp, e_vp, ' '+ans)
+                print 'hypo:', hypo
+                hypo = replace(hypo, s_aux, e_aux, '')
+                hypo = strip_nonalnum_re(hypo)
+                
+                # hypo = strip_nonalnum_re(hypo)+' '+ans
             else:
+                s, e = test_pattern('what', question)
                 hypo = replace(question, s, e, ans)
 
         elif q_type == QUESTION_TYPES[4]:
@@ -216,18 +215,35 @@ def rule_based_transform(question, ans, q_type):
             s, e = test_pattern('(name)|(choose)|(identify)', question)
             hypo = replace(question, s, e, ans+' is')
 
+        # if starting with aux_v, exchange the Verb and Noun
+        # if it is an or question, choose the one that heuristically matches the answer
         elif q_type == QUESTION_TYPES[10]:
-            if re.search('(yes, )|(no, )', ans):
-                s, e = test_pattern('(yes, )|(no, )', ans)
-                hypo = replace(ans, s, e, '')
-            elif ' or ' in question:
-                hypo = ans
-            elif re.search('yes\W??', ans):
-                s, e = test_pattern('(\A'+AUX_V_REGEX+' )|(([!"#$%&()*+,-./:;<=>?@\[\\\]^_`{|}~]){1} '+AUX_V_REGEX+' )', question)
-                hypo = replace(question, s, e, "")
-            elif re.search('no\W??', ans):
-                s, e = test_pattern('(\A'+AUX_V_REGEX+' )|(([!"#$%&()*+,-./:;<=>?@\[\\\]^_`{|}~]){1} '+AUX_V_REGEX+' )', question)
-                hypo = "not "+replace(question, s, e, "")
+            # if re.search('(yes, )|(no, )', ans):
+            #     s, e = test_pattern('(yes, )|(no, )', ans)
+            #     hypo = replace(ans, s, e, '')
+            # elif ' or ' in question:
+            #     hypo = ans
+            # elif re.search('yes\W??', ans):
+            #     s, e = test_pattern('(\A'+AUX_V_REGEX+' )|(([!"#$%&()*+,-./:;<=>?@\[\\\]^_`{|}~]){1} '+AUX_V_REGEX+' )', question)
+            #     hypo = replace(question, s, e, "")
+            # elif re.search('no\W??', ans):
+            #     s, e = test_pattern('(\A'+AUX_V_REGEX+' )|(([!"#$%&()*+,-./:;<=>?@\[\\\]^_`{|}~]){1} '+AUX_V_REGEX+' )', question)
+            #     hypo = "not "+replace(question, s, e, "")
+
+            if re.search('\A(((yes)\W+)|((yes)$))', ans):
+                s_aux, e_aux, s_np, e_np, first_NP = find_np_pos(question, ans, q_type)
+                hypo = replace(question, s_aux, e_np, first_NP + ' ' + question[s_aux:e_aux-1] + ' ')
+            
+            elif re.search('\A(((no)\W+)|((no)$))', ans):
+                s_aux, e_aux, s_np, e_np, first_NP = find_np_pos(question, ans, q_type)
+                hypo = replace(question, s_aux, e_np, first_NP + ' ' + question[s_aux:e_aux] + 'not ')
+
+            elif re.search(' or ', question):
+                s_aux, e_aux, s_np, e_np, first_NP = find_np_pos(question, ans, q_type)
+                hypo = replace(question, s_aux, e_np, first_NP + ' ' + question[s_aux:e_aux-1] + ' ')
+                s_candidate, e_candidate, candidate = find_or_pos(hypo, ans, q_type)
+                hypo = replace(hypo, s_candidate, e_candidate, candidate)
+
             else:
                 s, e = test_pattern('(\A'+AUX_V_REGEX+' )|(([!"#$%&()*+,-./:;<=>?@\[\\\]^_`{|}~]){1} '+AUX_V_REGEX+' )', question)
                 hypo = replace(question, s, e, "")
@@ -238,6 +254,106 @@ def rule_based_transform(question, ans, q_type):
 
     hypo = strip_question_mark(hypo)
     return hypo
+
+
+# find the positions of the NPs or VPs around 'or'
+def find_or_pos(question, ans, q_type):
+
+    sent_parse = loads(server.parse(question))
+    parse_tree = sent_parse['sentences'][0]['parsetree']
+    tree = ParentedTree.fromstring(parse_tree)
+    # print the tree
+    tree.pretty_print()
+
+    or_node = None
+    for subtree in tree.subtrees(filter=lambda x: x.label() == 'CC'):
+        # print "or position:", subtree.leaves()
+        or_node = subtree
+        break
+
+    # left_siblings = []
+    # l = or_node.left_sibling()
+    # while l:
+    #     left_siblings.append(l)
+    #     l = l.left_sibling()
+
+    # right_siblings = []
+    # r = or_node.right_sibling()
+    # while r:
+    #     right_siblings.append(r)
+    #     r = r.right_sibling()
+
+    # print left_siblings
+    # print right_siblings
+
+    or_parent = or_node.parent()
+    candidates_tok = or_parent.leaves()
+    candidates_len = len(' '.join(candidates_tok))
+
+    candidates_list = []
+    item = ''
+    for tok in candidates_tok:
+        if (tok != ',') and (tok != 'or'):
+            item = item + ' ' + tok
+        else:
+            candidates_list.append(item)
+            item = ''
+    candidates_list.append(item)
+
+    candidate_chosen = candidates_list[0]
+    for candidate in candidates_list:
+        if ans in candidate:
+            candidate_chosen = candidate
+            break
+    print "candidates_list:", candidates_list
+    print "candidate_chosen:", candidate_chosen
+
+    s0, e0 = test_pattern(candidates_list[0].strip(), question)
+    s1, e1 = test_pattern(candidates_list[-1].strip(), question)
+
+    return s0, e1, candidate_chosen
+
+
+
+# find the positions of the aux_v and the first noun
+def find_np_pos(question, ans, q_type, node_type='NP'):
+    s_aux, e_aux = test_pattern(q_type, question)
+    print '  %2d : %2d = "%s"' % (s_aux, e_aux-1, question[s_aux:e_aux])
+                
+    question_partial = question[s_aux:]
+    if node_type=='VP':
+        question_partial = question[e_aux:]
+    sent_parse = loads(server.parse(question_partial))
+    parse_tree = sent_parse['sentences'][0]['parsetree']
+    print "Parse Tree:", parse_tree
+    tree = Tree.fromstring(parse_tree)
+
+    first_NP = None
+    for subtree in tree.subtrees(filter=lambda x: x.label() == node_type):
+        # print(subtree.leaves())
+        first_NP = ' '.join(subtree.leaves())
+        break
+        # if re.search('(\A'+AUX_V_BE_REGEX+' )|(([!"#$%&()*+,-./:;<=>?@\[\\\]^_`{|}~]){1} '+AUX_V_BE_REGEX+' )', question):
+        #     for subsubtree in subtree.subtrees(filter=lambda y: y.label() == 'NP'):
+        #         first_NP = ' '.join(subsubtree.leaves())
+        #         break
+        # else:
+        #     first_NP = ' '.join(subtree.leaves())
+        #     break
+
+    print node_type+':', first_NP
+    print
+
+    first_NP_len = 0
+    if first_NP:
+        first_NP_len = len(first_NP)
+        s_np, e_np = test_pattern((first_NP.split(' '))[0], question)
+    else:
+        s_np = len(question)-1
+    # s_np = e_aux+1
+    e_np = s_np + first_NP_len
+
+    return s_aux, e_aux, s_np, e_np, first_NP
 
 
 # strip the question mark
@@ -321,15 +437,18 @@ def test_patterns(patterns, text):
             e = match.end()
             print '  %2d : %2d = "%s"' % \
                 (s, e-1, text[s:e])
-            print '    Groups:', match.groups()
-            if match.groupdict():
-                print '    Named groups:', match.groupdict()
+            # print '    Groups:', match.groups()
+            # if match.groupdict():
+            #     print '    Named groups:', match.groupdict()
             print
     return
 
 # for return purpose
 def test_pattern(pattern, text):
     match = re.search(pattern, text)
+    pos = len(text)-1
+    if not match:
+        return pos, pos
     s = match.start()
     e = match.end()
     # print '  %2d : %2d = "%s"' % (s, e-1, text[s:e])
