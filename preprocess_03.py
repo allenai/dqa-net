@@ -194,25 +194,26 @@ def prepro_questions(args):
     target_dir = args.target_dir
     questions_dir = os.path.join(data_dir, "questions")
     sents_path = os.path.join(target_dir, "sents.json")
-    answer_path = os.path.join(target_dir, "answers.json")
+    answers_path = os.path.join(target_dir, "answers.json")
     vocab_path = os.path.join(target_dir, "vocab.json")
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     vocab = json.load(open(vocab_path, "r"))
     meta_data = json.load(open(meta_data_path, "r"))
 
-    sents_dd = {}
-    answer_dd = {}
+    sentss_dict = {}
+    answers_dict = {}
 
     ques_names = sorted([name for name in os.listdir(questions_dir) if os.path.splitext(name)[1].endswith(".json")],
                         key=lambda x: int(os.path.splitext(os.path.splitext(x)[0])[0]))
     max_sent_size = 0
     num_choices = 0
+    num_questions = 0
     pbar = get_pbar(len(ques_names)).start()
     for i, ques_name in enumerate(ques_names):
         image_name, _ = os.path.splitext(ques_name)
         image_id, _ = os.path.splitext(image_name)
-        sents_d = {}
-        answer_d = {}
+        sentss = []
+        answers = []
         ques_path = os.path.join(questions_dir, ques_name)
         ques = json.load(open(ques_path, "r"))
         for ques_id, (ques_text, d) in enumerate(ques['questions'].items()):
@@ -220,22 +221,23 @@ def prepro_questions(args):
             assert not num_choices or num_choices == len(sents), "number of choices don't match: %s" % ques_name
             num_choices = len(sents)
             # TODO : one hot vector or index?
-            sents_d[str(ques_id)] = sents
-            answer_d[str(ques_id)] = d['correctAnswer']
+            sentss.append(sents)
+            answers.append(d['correctAnswer'])
             max_sent_size = max(max_sent_size, max(len(sent) for sent in sents))
-        sents_dd[image_id] = sents_d
-        answer_dd[image_id] = answer_d
+            num_questions += 1
+        sentss_dict[image_id] = sentss
+        answers_dict[image_id] = answers
         pbar.update(i)
     pbar.finish()
     meta_data['max_sent_size'] = max_sent_size
     meta_data['num_choices'] = num_choices
 
-    print("number of questions: %d" % len(sents_dd))
+    print("number of questions: %d" % len(num_questions))
     print("number of choices: %d" % num_choices)
     print("max sent size: %d" % max_sent_size)
     print("dumping json file ... ", end="")
-    json.dump(sents_dd, open(sents_path, "w"))
-    json.dump(answer_dd, open(answer_path, "w"))
+    json.dump(sentss_dict, open(sents_path, "w"))
+    json.dump(answers_dict, open(answers_path, "w"))
     json.dump(meta_data, open(meta_data_path, "w"))
     print("done")
 
@@ -247,6 +249,8 @@ def build_vocab(args):
     vocab_path = os.path.join(target_dir, "vocab.json")
     questions_dir = os.path.join(data_dir, "questions")
     annos_dir = os.path.join(data_dir, "annotations")
+    meta_data_path = os.path.join(target_dir, "meta_data.json")
+    meta_data = json.load(open(meta_data_path, 'r'))
 
     vocab_counter = defaultdict(int)
     anno_names = os.listdir(annos_dir)
@@ -293,10 +297,12 @@ def build_vocab(args):
 
     vocab_dict = {word: idx+1 for idx, word in enumerate(sorted(vocab_list))}
     vocab_dict['UNK'] = 0
+    meta_data['vocab_size'] = len(vocab_dict)
     print("vocab size: %d" % len(vocab_dict))
-    print ("dumping json file ... ", end="")
+    print("dumping json file ... ", end="")
     json.dump(vocab_dict, open(vocab_path, "w"))
-    print ("done")
+    json.dump(meta_data, open(meta_data_path, "w"))
+    print("done")
 
 
 def create_meta_data(args):
