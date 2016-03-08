@@ -16,8 +16,8 @@ def get_args():
     parser.add_argument("--show_im", default='True')
     parser.add_argument("--im_width", type=int, default=200)
     parser.add_argument("--ext", type=str, default=".png")
-    parser.add_argument("--html_path", type=str, default="/tmp/interpret_prepro.html")
-    parser.add_argument("--template_name", type=str, default="interpret_prepro.html")
+    parser.add_argument("--html_path", type=str, default="/tmp/list_relations.html")
+    parser.add_argument("--template_name", type=str, default="list_relations.html")
 
     args = parser.parse_args()
     return args
