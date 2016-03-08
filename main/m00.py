@@ -5,7 +5,7 @@ import os
 import tensorflow as tf
 
 from models.attention_model_00 import AttentionModel
-from read_data import read_data
+from read_data import r00
 
 flags = tf.app.flags
 
@@ -53,12 +53,12 @@ FLAGS = flags.FLAGS
 def main(_):
 
     if FLAGS.train:
-        train_ds = read_data('train', FLAGS, FLAGS.train_data_dir)
-        val_ds = read_data('val', FLAGS, FLAGS.val_data_dir)
+        train_ds = r00('train', FLAGS, FLAGS.train_data_dir)
+        val_ds = r00('val', FLAGS, FLAGS.val_data_dir)
         FLAGS.train_num_batches = train_ds.num_batches
         FLAGS.val_num_batches = FLAGS.val_num_batches
     else:
-        test_ds = read_data('test', FLAGS, FLAGS.test_data_dir)
+        test_ds = r00('test', FLAGS, FLAGS.test_data_dir)
         FLAGS.test_num_batches = test_ds.num_batches
 
     # Other parameters

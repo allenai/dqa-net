@@ -1,12 +1,11 @@
-import os
 import json
+import os
 
 import numpy as np
-import tensorflow as tf
 import progressbar as pb
+import tensorflow as tf
 
-from read_data_02 import DataSet
-from pprint import pprint
+from read_data.r02 import DataSet
 
 
 class BaseModel(object):

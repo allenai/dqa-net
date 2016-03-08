@@ -5,6 +5,7 @@ import tensorflow as tf
 
 VERY_SMALL_NUMBER = -1e10
 
+
 def softmax_with_mask(shape, x, mask, name=None):
     if name is None:
         name = softmax_with_mask.__name__

@@ -5,33 +5,31 @@ import os
 
 import tensorflow as tf
 
-from models.attention_model_02 import AttentionModel
-from read_data_02 import read_data
+from models.attention_model_01 import AttentionModel
+from read_data import r00
 
 flags = tf.app.flags
 
 # File directories
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
 flags.DEFINE_string("save_dir", "save", "Save directory [save]")
-flags.DEFINE_string("train_data_dir", 'data/1500o-train', "Train data directory [data/1500-train]")
-flags.DEFINE_string("val_data_dir", 'data/1500o-test', "Val data directory [data/1500-test]")
-flags.DEFINE_string("test_data_dir", 'data/1500o-test', "Test data directory [data/1500-test]")
-flags.DEFINE_string("eval_dir", "eval", "Eval value storing directory [eval]")
+flags.DEFINE_string("train_data_dir", 'data/1500r-train', "Train data directory [data/1500-train]")
+flags.DEFINE_string("val_data_dir", 'data/1500r-test', "Val data directory [data/1500-test]")
+flags.DEFINE_string("test_data_dir", 'data/1500r-test', "Test data directory [data/1500-test]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
 flags.DEFINE_integer("hidden_size", 100, "Hidden size [50]")
-flags.DEFINE_integer("image_size", 4096, "Image size [4096]")
-flags.DEFINE_integer("num_layers", 3, "Number of layers [3]")
-flags.DEFINE_integer("rnn_num_layers", 2, "Number of rnn layers [2]")
+flags.DEFINE_integer("num_layers", 1, "Number of layers [1]")
+flags.DEFINE_integer("rnn_num_layers", 1, "Number of rnn layers [1]")
 flags.DEFINE_float("init_mean", 0, "Initial weight mean [0]")
 flags.DEFINE_float("init_std", 0.1, "Initial weight std [0.1]")
 flags.DEFINE_float("init_lr", 0.01, "Initial learning rate [0.01]")
-flags.DEFINE_integer("anneal_period", 100, "Anneal period [100]")
+flags.DEFINE_integer("anneal_period", 10, "Anneal period [10]")
 flags.DEFINE_float("anneal_ratio", 0.5, "Anneal ratio [0.5")
-flags.DEFINE_integer("num_epochs", 200, "Total number of epochs for training [200]")
+flags.DEFINE_integer("num_epochs", 100, "Total number of epochs for training [100]")
 flags.DEFINE_boolean("linear_start", False, "Start training with linear model? [False]")
-flags.DEFINE_float("max_grad_norm", 40, "Max grad norm; above this number is clipped [40]")
+flags.DEFINE_float("max_grad_norm", 40, "Max grad norm; above this number is clipped [40")
 
 # Training and testing options
 flags.DEFINE_boolean("train", False, "Train? Test if False [False]")
@@ -63,23 +61,23 @@ def combine_meta_data(train_meta_data, val_meta_data):
 
 def main(_):
     if FLAGS.train:
-        train_ds = read_data('train', FLAGS, FLAGS.train_data_dir)
-        val_ds = read_data('val', FLAGS, FLAGS.val_data_dir)
+        train_ds = r00('train', FLAGS, FLAGS.train_data_dir)
+        val_ds = r00('val', FLAGS, FLAGS.val_data_dir)
         FLAGS.train_num_batches = train_ds.num_batches
-        FLAGS.val_num_batches = min(FLAGS.val_num_batches, train_ds.num_batches, val_ds.num_batches)
+        FLAGS.val_num_batches = FLAGS.val_num_batches
         train_meta_data_path = os.path.join(FLAGS.train_data_dir, "meta_data.json")
-        train_meta_data = json.load(open(train_meta_data_path, "r"))
+        train_meta_data = json.load(open(train_meta_data_path, "rb"))
         val_meta_data_path = os.path.join(FLAGS.val_data_dir, "meta_data.json")
-        val_meta_data = json.load(open(val_meta_data_path, "r"))
+        val_meta_data = json.load(open(val_meta_data_path, "rb"))
         meta_data = combine_meta_data(train_meta_data, val_meta_data)
         vocab_path = os.path.join(FLAGS.train_data_dir, "vocab.json")
         if not os.path.exists(FLAGS.save_dir):
             os.mkdir(FLAGS.save_dir)
     else:
-        test_ds = read_data('test', FLAGS, FLAGS.test_data_dir)
+        test_ds = r00('test', FLAGS, FLAGS.test_data_dir)
         FLAGS.test_num_batches = test_ds.num_batches
         meta_data_path = os.path.join(FLAGS.test_data_dir, "meta_data.json")
-        meta_data = json.load(open(meta_data_path, "r"))
+        meta_data = json.load(open(meta_data_path, "rb"))
         vocab_path = os.path.join(FLAGS.test_data_dir, "vocab.json")
 
     # Other parameters
@@ -88,7 +86,7 @@ def main(_):
     FLAGS.max_num_rels = meta_data['max_num_rels']
     FLAGS.pred_size = meta_data['pred_size']
     FLAGS.num_choices = meta_data['num_choices']
-    vocab = json.load(open(vocab_path, "r"))
+    vocab = json.load(open(vocab_path, "rb"))
     FLAGS.vocab_size = len(vocab)
 
     # For quick draft build (deubgging).
@@ -115,8 +113,7 @@ def main(_):
             model.train(sess, writer, train_ds, val_ds)
         else:
             model.load(sess)
-            eval_tensors = [model.yp]
-            model.eval(sess, test_ds, eval_tensors=eval_tensors)
+            model.eval(sess, test_ds)
 
 if __name__ == "__main__":
     tf.app.run()
