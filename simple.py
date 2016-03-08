@@ -92,13 +92,12 @@ def create_graph(anno):
     try:
         d = anno['relationships']['interObject']['linkage']
     except:
-        return None
+        return graph
     for dd in d.values():
         if dd['category'] == 'objectToObject':
             dest = _get_val(anno, dd['destination'][0])
             orig = _get_val(anno, dd['origin'][0])
             graph.add_edge(dest, orig)
-    print(graph.nodes())
     return graph
 
 
