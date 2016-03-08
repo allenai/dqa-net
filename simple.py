@@ -118,7 +118,7 @@ def guess(graph, question, choices):
     dists = []
     for choice in choices:
         choice_node = find_node(graph, choice)
-        if choice_node is None or not nx.has_path(graph, ques_node, choice_node):
+        if choice_node is None or choice_node == ques_node or not nx.has_path(graph, ques_node, choice_node):
             dists.append(MAX)
         else:
             pl = len(nx.shortest_path(graph, ques_node, choice_node))
