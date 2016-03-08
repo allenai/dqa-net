@@ -27,9 +27,9 @@ def create_fold(args):
     if shuffle:
         random.shuffle(image_ids)
 
-    mid = int(len(image_ids) * ratio)
-    print("train={}, test={}".format(mid, len(image_ids)-mid))
-    fold = {'train': image_ids[:mid], 'test': image_ids[mid:]}
+    mid = int(len(image_ids) * (1 - ratio))
+    print("train={}, test={}".format(len(image_ids)-mid, mid))
+    fold = {'train': image_ids[mid:], 'test': image_ids[:mid]}
     json.dump(fold, open(fold_path, 'w'))
 
 if __name__ == "__main__":
