@@ -42,9 +42,7 @@ def _vget(vocab_dict, word):
     if word in vocab_dict:
         return vocab_dict[word]
     else:
-        keys = list(vocab_dict.keys())
-        key = random.choice(keys)
-        return vocab_dict[key]
+        return 0
 
 
 def _vlup(vocab_dict, words):
@@ -293,8 +291,7 @@ def build_vocab(args):
         pbar.update(i)
     pbar.finish()
 
-    word_list, counts = zip(*sorted([pair for pair in word_counter.items() if pair[1] > min_count],
-                             key=lambda x: -x[1]))
+    word_list, counts = zip(*sorted([pair for pair in word_counter.items()], key=lambda x: -x[1]))
     freq = 5
     print("top %d frequent words:" % freq)
     for word, count in zip(word_list[:freq], counts[:freq]):
@@ -313,17 +310,19 @@ def build_vocab(args):
                 word_size = len(vector)
     print("done")
     vocab_word_list = [word for word in word_list if word in features]
-    vocab_size = len(features)
+    unknown_word_list = [word for word in word_list if word not in features]
+    vocab_size = len(features) + 1
 
     f = h5py.File(emb_mat_path, 'w')
     emb_mat = f.create_dataset('data', [vocab_size, word_size], dtype='float')
     vocab = {}
     pbar = get_pbar(len(vocab_word_list)).start()
     for i, word in enumerate(vocab_word_list):
-        emb_mat[i, :] = features[word]
-        vocab[word] = i
+        emb_mat[i+1, :] = features[word]
+        vocab[word] = i + 1
         pbar.update(i)
     pbar.finish()
+    vocab['UNK'] = 0
 
     meta_data['vocab_size'] = vocab_size
     meta_data['word_size'] = word_size

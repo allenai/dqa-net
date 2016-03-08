@@ -22,11 +22,7 @@
                 <td>{{ row.question_id }}</td>
                 <td>
                     {% if show_im %}
-                        {% if row.replaced %}
-                            <img src="{{ row.rep_image_url }}">
-                        {% else %}
-                            <img src="{{ row.image_url }}">
-                        {% endif %}
+                        <img src="{{ row.image_url }}">
                     {% else %}
                         Image hidden.
                     {% endif %}

@@ -8,7 +8,6 @@ from jinja2 import Environment, FileSystemLoader
 from utils import get_pbar
 
 
-
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("prepro_dir")
@@ -42,56 +41,45 @@ def _decode_relation(decoder, relation):
 def interpret_relations(args):
     prepro_dir = args.prepro_dir
     meta_data_dir = os.path.join(prepro_dir, "meta_data.json")
-    meta_data = json.load(open(meta_data_dir, "rb"))
+    meta_data = json.load(open(meta_data_dir, "r"))
     data_dir = meta_data['data_dir']
 
     images_dir = os.path.join(data_dir, 'images')
     annos_dir = os.path.join(data_dir, 'annotations')
-    replaced_images_dir = os.path.join(data_dir, "imagesReplacedText")
     html_path = args.html_path
 
     sents_path = os.path.join(prepro_dir, 'sents.json')
     relations_path = os.path.join(prepro_dir, 'relations.json')
     vocab_path = os.path.join(prepro_dir, 'vocab.json')
-    id_map_path = os.path.join(prepro_dir, 'id_map.json')
     answers_path = os.path.join(prepro_dir, 'answers.json')
-    replaced_path = os.path.join(prepro_dir, 'replaced.json')
-    sents_dict = json.load(open(sents_path, "rb"))
-    relations_dict = json.load(open(relations_path, "rb"))
-    vocab = json.load(open(vocab_path, "rb"))
-    id_map = json.load(open(id_map_path, "rb"))
-    answer_dict = json.load(open(answers_path, "rb"))
-    replaced = json.load(open(replaced_path, 'rb'))
-    decoder = {idx: word for word, idx in vocab.iteritems()}
+    sentss_dict = json.load(open(sents_path, "r"))
+    relations_dict = json.load(open(relations_path, "r"))
+    vocab = json.load(open(vocab_path, "r"))
+    answers_dict = json.load(open(answers_path, "r"))
+    decoder = {idx: word for word, idx in vocab.items()}
 
     headers = ['iid', 'qid', 'image', 'sents', 'answer', 'annotations', 'relations']
     rows = []
-    question_ids = sorted(sents_dict.keys(), key=lambda x: int(id_map[x]))
-    question_ids = [id_ for id_ in question_ids if args.start <= int(id_) < args.stop]
-    pbar = get_pbar(len(question_ids)).start()
-    for i, question_id in enumerate(question_ids):
-        sents = sents_dict[question_id]
-        answer = answer_dict[question_id]
-        image_id = id_map[question_id]
-        rep = replaced[question_id]
-        image_name = "%s.png" % image_id
-        json_name = "%s.json" % image_name
-        image_path = os.path.join(images_dir, image_name)
-        anno_path = os.path.join(annos_dir, json_name)
-        # anno = json.load(open(anno_path, 'rb'))
-        replaced_image_path = os.path.join(replaced_images_dir, image_name)
-        relations = relations_dict[question_id]
+    pbar = get_pbar(len(sentss_dict)).start()
+    image_ids = sorted(sentss_dict.keys(), key=lambda x: int(x))
+    for i, image_id in enumerate(image_ids):
+        sentss = sentss_dict[image_id]
+        answers = answers_dict[image_id]
+        relations = relations_dict[image_id]
         decoded_relations = [_decode_relation(decoder, relation) for relation in relations]
-        row = {'image_id': image_id,
-               'question_id': question_id,
-               'image_url': image_path,
-               'rep_image_url': replaced_image_path,
-               'anno_url': anno_path,
-               'sents': [_decode_sent(decoder, sent) for sent in sents],
-               'answer': answer,
-               'relations': decoded_relations,
-               'replaced': rep}
-        rows.append(row)
+        for question_id, (sents, answer) in enumerate(zip(sentss, answers)):
+            image_name = "%s.png" % image_id
+            json_name = "%s.json" % image_name
+            image_path = os.path.join(images_dir, image_name)
+            anno_path = os.path.join(annos_dir, json_name)
+            row = {'image_id': image_id,
+                   'question_id': question_id,
+                   'image_url': image_path,
+                   'anno_url': anno_path,
+                   'sents': [_decode_sent(decoder, sent) for sent in sents],
+                   'answer': answer,
+                   'relations': decoded_relations}
+            rows.append(row)
         pbar.update(i)
     pbar.finish()
     var_dict = {'title': "Question List: %d - %d" % (args.start, args.stop - 1),
@@ -105,8 +93,8 @@ def interpret_relations(args):
     env = Environment(loader=FileSystemLoader(templates_dir))
     template = env.get_template(args.template_name)
     out = template.render(**var_dict)
-    with open(html_path, "wb") as f:
-        f.write(out.encode('UTF-8'))
+    with open(html_path, "w") as f:
+        f.write(out)
 
     os.system("open %s" % html_path)
 

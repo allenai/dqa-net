@@ -49,7 +49,7 @@ def list_dqa_questions(args):
 
     headers = ['image_id', 'question_id', 'image', 'question', 'choices', 'answer', 'annotations']
     rows = []
-    image_names = os.listdir(images_dir)
+    image_names = [name for name in os.listdir(images_dir) if name.endswith('png')]
     image_names = sorted(image_names, key=lambda name: int(os.path.splitext(name)[0]))
     image_names = [name for name in image_names
                    if name.endswith(args.ext) and args.start <= int(os.path.splitext(name)[0]) < args.stop]
