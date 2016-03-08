@@ -6,7 +6,7 @@ from pprint import pprint
 import tensorflow as tf
 
 from configs.get_config import get_config
-from configs.model_03_config import configs
+from configs.c03 import configs
 from models.attention_model_03 import AttentionModel
 from read_data.r03 import read_data
 
