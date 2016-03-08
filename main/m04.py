@@ -3,12 +3,13 @@ import os
 import shutil
 from pprint import pprint
 
+import h5py
 import tensorflow as tf
 
 from configs.get_config import get_config
-from configs.c03 import configs
-from models.attention_model_03 import AttentionModel
-from read_data.r03 import read_data
+from configs.c04 import configs
+from models.attention_model_04 import AttentionModel
+from read_data.r04 import read_data
 
 flags = tf.app.flags
 
@@ -72,6 +73,8 @@ def main(_):
     config.num_choices = meta_data['num_choices']
     config.vocab_size = meta_data['vocab_size']
     config.main_name = __name__
+    emb_mat_path = os.path.join(config.data_dir, 'emb_mat.h5')
+    config.emb_mat = h5py.File(emb_mat_path, 'r')['data'][:]
 
     eval_dir = "evals/%s" % config.model_name
     eval_subdir = os.path.join(eval_dir, "config_%s" % str(config.config).zfill(2))
