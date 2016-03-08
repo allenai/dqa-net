@@ -3,18 +3,15 @@ import os
 import json
 import shutil
 from collections import defaultdict
-from copy import deepcopy
-from pprint import pprint
 import re
+import random
 
 import numpy as np
-from nltk.stem import PorterStemmer
 
 # from qa2hypo import qa2hypo
 from utils import get_pbar
 
 
-stemmer = PorterStemmer()
 
 def qa2hypo(question, answer):
     return "%s %s" % (question, answer)
@@ -23,12 +20,11 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("data_dir")
     parser.add_argument("target_dir")
+    parser.add_argument("glove_path")
     parser.add_argument("--min_count", type=int, default=5)
     parser.add_argument("--vgg_model_path", default="~/caffe-models/vgg-19.caffemodel")
     parser.add_argument("--vgg_proto_path", default="~/caffe-models/vgg-19.prototxt")
     return parser.parse_args()
-
-STEM = False
 
 def _tokenize(raw):
     tokens = re.findall(r"[\w]+", raw)
@@ -37,16 +33,17 @@ def _tokenize(raw):
 
 def _vadd(vocab_counter, word):
     word = word.lower()
-    if STEM:
-        word = stemmer.stem(word)
     vocab_counter[word] += 1
 
 
 def _vget(vocab_dict, word):
     word = word.lower()
-    if STEM:
-        word = stemmer.stem(word)
-    return vocab_dict[word] if word in vocab_dict else 0
+    if word in vocab_dict:
+        return vocab_dict[word]
+    else:
+        keys = list(vocab_dict.keys())
+        key = random.choice(keys)
+        return vocab_dict[key]
 
 
 def _vlup(vocab_dict, words):
@@ -257,6 +254,7 @@ def build_vocab(args):
     annos_dir = os.path.join(data_dir, "annotations")
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     meta_data = json.load(open(meta_data_path, 'r'))
+    glove_path = args.glove_path
 
     vocab_counter = defaultdict(int)
     anno_names = os.listdir(annos_dir)
@@ -295,16 +293,24 @@ def build_vocab(args):
 
     vocab_list, counts = zip(*sorted([pair for pair in vocab_counter.items() if pair[1] > min_count],
                              key=lambda x: -x[1]))
-
     freq = 5
     print("top %d frequent words:" % freq)
     for word, count in zip(vocab_list[:freq], counts[:freq]):
         print("%r: %d" % (word, count))
 
-    vocab_dict = {word: idx+1 for idx, word in enumerate(sorted(vocab_list))}
-    vocab_dict['UNK'] = 0
+    vocab_dict = {}
+    with open(glove_path, 'r') as fp:
+        for line in fp:
+            array = line.lstrip().rstrip().split(" ")
+            word = array[0]
+            if word in vocab_counter:
+                vector = list(map(float, array[1:]))
+                vocab_dict[word] = vector
+
     meta_data['vocab_size'] = len(vocab_dict)
+    print("num of distinct words: %d" % len(vocab_counter))
     print("vocab size: %d" % len(vocab_dict))
+
     print("dumping json file ... ", end="")
     json.dump(vocab_dict, open(vocab_path, "w"))
     json.dump(meta_data, open(meta_data_path, "w"))
