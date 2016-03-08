@@ -22,7 +22,7 @@ def _tokenize(raw):
     tokens = re.findall(r"[\w]+", raw)
     return tokens
 
-stem = False
+stem = True
 stemmer = PorterStemmer()
 def _normalize(word):
     word = word.lower()
@@ -41,7 +41,8 @@ def load_all(data_dir):
     answers_dict = {}
 
     image_ids = sorted([path.splitext(name)[0] for name in listdir(images_dir) if name.endswith(".png")], key=lambda x: int(x))
-    for image_id in image_ids:
+    pbar = get_pbar(len(image_ids)).start()
+    for i, image_id in enumerate(image_ids):
         json_name = "%s.png.json" % image_id
         anno_path = path.join(annos_dir, json_name)
         ques_path = path.join(questions_dir, json_name)
@@ -64,6 +65,8 @@ def load_all(data_dir):
             choicess_dict[image_id] = choicess
             answers_dict[image_id] = answers
             anno_dict[image_id] = anno
+        pbar.update(i)
+    pbar.finish()
 
     return anno_dict, questions_dict, choicess_dict, answers_dict
 
@@ -86,7 +89,10 @@ def _get_val(anno, key):
 
 def create_graph(anno):
     graph = nx.Graph()
-    if 'linkage' not in anno['relationships']:
+    if 'relationships' not in anno:
+        return graph
+    d = anno['relationships']
+    if 'linkage' not in d:
         return graph
     d = anno['relationships']['linkage']
     for dd in d.values():
