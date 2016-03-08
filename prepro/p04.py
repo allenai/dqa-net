@@ -6,6 +6,7 @@ from collections import defaultdict
 import re
 import random
 
+import h5py
 import numpy as np
 
 # from qa2hypo import qa2hypo
@@ -184,7 +185,7 @@ def prepro_annos(args):
     print("number of relations: %d" % sum(len(relations) for relations in relations_dict))
     print('max label size: %d' % max_label_size)
     print("max num rels: %d" % max_num_rels)
-    print("dumping json file ... ", end="")
+    print("dumping json file ... ", end="", flush=True)
     json.dump(relations_dict, open(relations_path, 'w'))
     json.dump(meta_data, open(meta_data_path, 'w'))
     print("done")
@@ -238,7 +239,7 @@ def prepro_questions(args):
     print("number of questions: %d" % num_questions)
     print("number of choices: %d" % num_choices)
     print("max sent size: %d" % max_sent_size)
-    print("dumping json file ... ", end="")
+    print("dumping json file ... ", end="", flush=True)
     json.dump(sentss_dict, open(sents_path, "w"))
     json.dump(answers_dict, open(answers_path, "w"))
     json.dump(meta_data, open(meta_data_path, "w"))
@@ -250,13 +251,14 @@ def build_vocab(args):
     target_dir = args.target_dir
     min_count = args.min_count
     vocab_path = os.path.join(target_dir, "vocab.json")
+    emb_mat_path = os.path.join(target_dir, "emb_mat.h5")
     questions_dir = os.path.join(data_dir, "questions")
     annos_dir = os.path.join(data_dir, "annotations")
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     meta_data = json.load(open(meta_data_path, 'r'))
     glove_path = args.glove_path
 
-    vocab_counter = defaultdict(int)
+    word_counter = defaultdict(int)
     anno_names = os.listdir(annos_dir)
     pbar = get_pbar(len(anno_names))
     pbar.start()
@@ -269,7 +271,7 @@ def build_vocab(args):
         for _, d in anno['text'].items():
             text = d['value']
             for word in _tokenize(text):
-                _vadd(vocab_counter, word)
+                _vadd(word_counter, word)
         pbar.update(i)
     pbar.finish()
 
@@ -284,35 +286,54 @@ def build_vocab(args):
         ques = json.load(open(ques_path, "r"))
         for ques_text, d in ques['questions'].items():
             for word in _tokenize(ques_text):
-                _vadd(vocab_counter, word)
+                _vadd(word_counter, word)
             for choice in d['answerTexts']:
                 for word in _tokenize(choice):
-                    _vadd(vocab_counter, word)
+                    _vadd(word_counter, word)
         pbar.update(i)
     pbar.finish()
 
-    vocab_list, counts = zip(*sorted([pair for pair in vocab_counter.items() if pair[1] > min_count],
+    word_list, counts = zip(*sorted([pair for pair in word_counter.items() if pair[1] > min_count],
                              key=lambda x: -x[1]))
     freq = 5
     print("top %d frequent words:" % freq)
-    for word, count in zip(vocab_list[:freq], counts[:freq]):
+    for word, count in zip(word_list[:freq], counts[:freq]):
         print("%r: %d" % (word, count))
 
-    vocab_dict = {}
+    features = {}
+    word_size = 0
+    print("reading %s ... " % glove_path, end="", flush=True)
     with open(glove_path, 'r') as fp:
         for line in fp:
             array = line.lstrip().rstrip().split(" ")
             word = array[0]
-            if word in vocab_counter:
+            if word in word_counter:
                 vector = list(map(float, array[1:]))
-                vocab_dict[word] = vector
+                features[word] = vector
+                word_size = len(vector)
+    print("done")
+    vocab_word_list = [word for word in word_list if word in features]
+    vocab_size = len(features)
 
-    meta_data['vocab_size'] = len(vocab_dict)
-    print("num of distinct words: %d" % len(vocab_counter))
-    print("vocab size: %d" % len(vocab_dict))
+    f = h5py.File(emb_mat_path, 'w')
+    emb_mat = f.create_dataset('data', [vocab_size, word_size], dtype='float')
+    vocab = {}
+    pbar = get_pbar(len(vocab_word_list)).start()
+    for i, word in enumerate(vocab_word_list):
+        emb_mat[i, :] = features[word]
+        vocab[word] = i
+        pbar.update(i)
+    pbar.finish()
 
-    print("dumping json file ... ", end="")
-    json.dump(vocab_dict, open(vocab_path, "w"))
+    meta_data['vocab_size'] = vocab_size
+    meta_data['word_size'] = word_size
+    print("num of distinct words: %d" % len(word_counter))
+    print("vocab size: %d" % vocab_size)
+    print("word size: %d" % word_size)
+
+    print("dumping json file ... ", end="", flush=True)
+    f.close()
+    json.dump(vocab, open(vocab_path, "w"))
     json.dump(meta_data, open(meta_data_path, "w"))
     print("done")
 
@@ -336,7 +357,7 @@ def create_image_ids_and_paths(args):
     image_ids = [os.path.splitext(name)[0] for name in image_names]
     ordered_image_ids = sorted(image_ids, key=lambda x: int(x))
     ordered_image_names = ["%s.png" % id_ for id_ in ordered_image_ids]
-    print("dumping json files ... ", end="")
+    print("dumping json files ... ", end="", flush=True)
     image_paths = [os.path.join(images_dir, name) for name in ordered_image_names]
     json.dump(ordered_image_ids, open(image_ids_path, "w"))
     json.dump(image_paths, open(image_paths_path, "w"))
