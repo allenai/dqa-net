@@ -151,7 +151,7 @@ def evaluate(anno_dict, questions_dict, choicess_dict, answers_dict):
                 incorrect += 1
         pbar.update(i)
     pbar.finish()
-    print("expected accuracy: (0.25 * %d + %d)/%d = %.4f" % (guessed, correct, total, 0.25*guessed + correct/total))
+    print("expected accuracy: (0.25 * %d + %d)/%d = %.4f" % (guessed, correct, total, (0.25*guessed + correct)/total))
 
 
 def select(fold_path, *all_):
