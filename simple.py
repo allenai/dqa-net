@@ -113,19 +113,29 @@ def find_node(graph, text):
 
 def guess(graph, question, choices):
     MAX = 9999
+    SUBMAX = 999
     ques_node = find_node(graph, question)
-    if ques_node is None:
-        return None
     dists = []
     for choice in choices:
         choice_node = find_node(graph, choice)
-        if choice_node is None or choice_node == ques_node or not nx.has_path(graph, ques_node, choice_node):
-            dists.append(MAX)
+        if ques_node is None and choice_node is None:
+            dist = MAX
+        elif ques_node is None and choice_node is not None:
+            dist = SUBMAX
+        elif ques_node is not None and choice_node is None:
+            dist = MAX
         else:
-            pl = len(nx.shortest_path(graph, ques_node, choice_node))
-            dists.append(pl)
+            if nx.has_path(graph, ques_node, choice_node):
+                pl = len(nx.shortest_path(graph, ques_node, choice_node))
+                dist = pl
+            else:
+                dist = MAX
+        dists.append(dist)
     answer, dist = min(enumerate(dists), key=lambda x: x[1])
+    max_dist = max(dists)
     if dist == MAX:
+        return None
+    if dist == max_dist:
         return None
     return answer
 
