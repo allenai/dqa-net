@@ -97,7 +97,8 @@ def create_graph(anno):
         if dd['category'] == 'objectToObject':
             dest = _get_val(anno, dd['destination'][0])
             orig = _get_val(anno, dd['origin'][0])
-            graph.add_edge(dest, orig)
+            if dest and orig:
+                graph.add_edge(dest, orig)
     return graph
 
 
@@ -123,7 +124,7 @@ def guess(graph, question, choices):
         else:
             pl = len(nx.shortest_path(graph, ques_node, choice_node))
             dists.append(pl)
-    answer, dist = max(enumerate(dists), key=lambda x: x[1])
+    answer, dist = min(enumerate(dists), key=lambda x: x[1])
     if dist == MAX:
         return None
     return answer
@@ -152,6 +153,7 @@ def evaluate(anno_dict, questions_dict, choicess_dict, answers_dict):
         pbar.update(i)
     pbar.finish()
     print("expected accuracy: (0.25 * %d + %d)/%d = %.4f" % (guessed, correct, total, (0.25*guessed + correct)/total))
+    print("precision: %d/%d = %.4f" % (correct, correct + incorrect, correct/(correct + incorrect)))
 
 
 def select(fold_path, *all_):
