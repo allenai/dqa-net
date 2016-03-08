@@ -78,7 +78,7 @@ def _get_val(anno, key):
         val = _normalize(val)
         return val
     elif first == 'O':
-        d = anno['object'][key]
+        d = anno['objects'][key]
         if 'text' in d and len(d['text']) > 0:
             key = d['text'][0]
             return _get_val(anno, key)
@@ -89,17 +89,16 @@ def _get_val(anno, key):
 
 def create_graph(anno):
     graph = nx.Graph()
-    if 'relationships' not in anno:
-        return graph
-    d = anno['relationships']
-    if 'linkage' not in d:
-        return graph
-    d = anno['relationships']['linkage']
+    try:
+        d = anno['relationships']['interObject']['linkage']
+    except:
+        return None
     for dd in d.values():
         if dd['category'] == 'objectToObject':
-            dest = _get_val(anno, dd['destination'])
-            orig = _get_val(anno, dd['origin'])
+            dest = _get_val(anno, dd['destination'][0])
+            orig = _get_val(anno, dd['origin'][0])
             graph.add_edge(dest, orig)
+    print(graph.nodes())
     return graph
 
 
@@ -134,6 +133,7 @@ def guess(graph, question, choices):
 def evaluate(anno_dict, questions_dict, choicess_dict, answers_dict):
     total = 0
     correct = 0
+    incorrect = 0
     guessed = 0
     pbar = get_pbar(len(anno_dict)).start()
     for i, (image_id, anno) in enumerate(anno_dict.items()):
@@ -146,13 +146,13 @@ def evaluate(anno_dict, questions_dict, choicess_dict, answers_dict):
             a = guess(graph, question, choices)
             if a is None:
                 guessed += 1
-                a = randint(0, 3)
-            if answer == a:
+            elif answer == a:
                 correct += 1
+            else:
+                incorrect += 1
         pbar.update(i)
     pbar.finish()
-    print("accuracy: %d/%d = %.4f" % (correct, total, correct/total))
-    print("guessed: %d/%d = %.4f" % (guessed, total, guessed/total))
+    print("expected accuracy: (0.25 * %d + %d)/%d = %.4f" % (guessed, correct, total, 0.25*guessed + correct/total))
 
 
 def select(fold_path, *all_):
