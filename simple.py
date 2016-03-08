@@ -159,7 +159,7 @@ def select(fold_path, *all_):
     test_ids = fold['test']
     new_all = []
     for each in all_:
-        new_each = {id_: each[id_] for id_ in test_ids}
+        new_each = {id_: each[id_] for id_ in test_ids if id_ in each}
         new_all.append(new_each)
     return new_all
 
