@@ -2,18 +2,18 @@ import json
 import os
 import random
 import argparse
+from collections import defaultdict
 
 
-def get_args():
+def create_linear_fold():
     parser = argparse.ArgumentParser()
     parser.add_argument("data_dir")
     parser.add_argument("fold_path")
     parser.add_argument("--ratio", type=float, default=0.8)
     parser.add_argument("--shuffle", default="False")
-    return parser.parse_args()
 
+    args = parser.parse_args()
 
-def create_fold(args):
     data_dir = args.data_dir
     images_dir = os.path.join(data_dir, "images")
     annotations_dir = os.path.join(data_dir, "annotations")
@@ -32,6 +32,31 @@ def create_fold(args):
     fold = {'train': image_ids[mid:], 'test': image_ids[:mid]}
     json.dump(fold, open(fold_path, 'w'))
 
+
+def create_categorized_fold():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("cat_path")
+    parser.add_argument("fold_path")
+    parser.add_argument("--ratio", type=float, default=0.8)
+    args = parser.parse_args()
+    cats_path = args.cat_path
+    cat_dict = json.load(open(cats_path, 'r'))
+    ids_dict = defaultdict(set)
+    for image_name, cat in cat_dict.items():
+        image_id, _ = os.path.splitext(image_name)
+        ids_dict[cat].add(image_id)
+    cats = list(ids_dict.keys())
+    random.shuffle(cats)
+    mid = int(args.ratio * len(cats))
+    train_cats = cats[:mid]
+    test_cats = cats[mid:]
+    print("train categories: %s" % ", ".join(train_cats))
+    print("test categories: %s" % ", ".join(test_cats))
+    train_ids = list(set.union(*[ids_dict[cat] for cat in train_cats]))
+    test_ids = list(set.union(*[ids_dict[cat] for cat in test_cats]))
+    fold = {'train': train_ids, 'test': test_ids, 'trainCats': train_cats, 'testCats': test_cats}
+    json.dump(fold, open(args.fold_path, "w"))
+
 if __name__ == "__main__":
-    ARGS = get_args()
-    create_fold(ARGS)
+    # create_linear_fold(ARGS)
+    create_categorized_fold()
