@@ -242,7 +242,7 @@ class AttentionModel(BaseModel):
         last_layer = layers[-1]
         o_sum = sum(layer.o for layer in layers)
 
-        with tf.variable_scope('m'):
+        with tf.variable_scope('f'):
             image = self.image
             if params.train:
                 image = tf.nn.dropout(image, params.keep_prob)

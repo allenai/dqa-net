@@ -240,7 +240,7 @@ class AttentionModel(BaseModel):
         last_layer = layers[-1]
         o_sum = sum(layer.o for layer in layers)
 
-        with tf.variable_scope('m'):
+        with tf.variable_scope('f'):
             image_trans_mat = tf.get_variable('I', shape=[G, d])
             image_trans_bias = tf.get_variable('bI', shape=[])
             g = tf.tanh(tf.matmul(self.image, image_trans_mat) + image_trans_bias, name='g')  # [N, d]

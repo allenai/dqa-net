@@ -144,7 +144,7 @@ def prepro_annos(args):
     target_dir = args.target_dir
     vocab_path = os.path.join(target_dir, "vocab.json")
     vocab = json.load(open(vocab_path, "r"))
-    facts_path = os.path.join(target_dir, "fats.json")
+    facts_path = os.path.join(target_dir, "facts.json")
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     meta_data = json.load(open(meta_data_path, "r"))
     facts_dict = {}

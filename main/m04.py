@@ -67,9 +67,8 @@ def main(_):
 
     # Other parameters
     config.max_sent_size = meta_data['max_sent_size']
-    config.max_label_size = meta_data['max_label_size']
-    config.max_num_rels = meta_data['max_num_rels']
-    config.pred_size = meta_data['pred_size']
+    config.max_fact_size = meta_data['max_fact_size']
+    config.max_num_facts = meta_data['max_num_facts']
     config.num_choices = meta_data['num_choices']
     config.vocab_size = meta_data['vocab_size']
     config.main_name = __name__

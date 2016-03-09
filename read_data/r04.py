@@ -54,34 +54,36 @@ def read_data(params, mode):
         cur_image_ids = fold[mode]
     elif mode == 'val':
         cur_image_ids = fold['test']
+    else:
+        raise Exception()
 
     sents_path = os.path.join(data_dir, "sents.json")
-    relations_path = os.path.join(data_dir, "relations.json")
+    facts_path = os.path.join(data_dir, "facts.json")
     answers_path = os.path.join(data_dir, "answers.json")
     images_path = os.path.join(data_dir, "images.h5")
     image_ids_path = os.path.join(data_dir, "image_ids.json")
 
     sentss_dict = json.load(open(sents_path, "r"))
-    relations_dict = json.load(open(relations_path, "r"))
+    facts_dict = json.load(open(facts_path, "r"))
     answers_dict = json.load(open(answers_path, "r"))
     images_h5 = h5py.File(images_path, 'r')
     all_image_ids = json.load(open(image_ids_path, 'r'))
     image_id2idx = {id_: idx for idx, id_ in enumerate(all_image_ids)}
 
     batch_size = params.batch_size
-    sentss, answers, relationss, images = [], [], [], []
+    sentss, answers, factss, images = [], [], [], []
     for image_id in cur_image_ids:
-        if image_id not in sentss_dict or image_id not in relations_dict:
+        if image_id not in sentss_dict or image_id not in facts_dict:
             continue
-        relations = relations_dict[image_id]
+        facts = facts_dict[image_id]
         image = images_h5['data'][image_id2idx[image_id]]
         for sents, answer in zip(sentss_dict[image_id], answers_dict[image_id]):
             sentss.append(sents)
             answers.append(answer)
-            relationss.append(relations)
+            factss.append(facts)
             images.append(image)
 
-    data = [sentss, relationss, images, answers]
+    data = [sentss, factss, images, answers]
     idxs = np.arange(len(answers))
     include_leftover = not params.train
     data_set = DataSet(mode, batch_size, data, idxs, include_leftover=include_leftover)
