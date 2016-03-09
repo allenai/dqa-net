@@ -5,6 +5,7 @@ import shutil
 from collections import defaultdict, namedtuple
 import re
 import random
+from pprint import pprint
 
 import h5py
 import numpy as np
@@ -66,13 +67,13 @@ def _get_text_old(vocab_dict, anno, key):
 def _get_text(anno, key):
     if key[0] == 'T':
         value = anno['text'][key]['value']
+        return value
     elif key[0] == 'O':
         d = anno['objects'][key]
         if 'text' in d and len(d['text']) > 0:
             new_key = d['text'][0]
             return _get_text(anno, new_key)
     return None
-
 
 
 def _get_center(anno, key):
@@ -105,11 +106,21 @@ def _get_1hot_vector(dim, idx):
     arr[idx] = 1
     return arr
 
-
 def rel2text(anno, rel):
-    tup = anno[:3]
+    MAX_LABEL_SIZE = 3
+    tup = rel[:3]
+    o_keys, d_keys = rel[3:]
     if tup == ('interObject', 'linkage', 'objectToObject'):
         template = "There is an arrow from %s to %s."
+        o = _get_text(anno, o_keys[0]) if len(o_keys) else None
+        d = _get_text(anno, d_keys[0]) if len(d_keys) else None
+        if o and d:
+            o_words = _tokenize(o)
+            d_words = _tokenize(d)
+            if max(len(o_words), len(d_words)) <= MAX_LABEL_SIZE:
+                text = template % (o, d)
+                return text
+    return None
 
 
 Relation = namedtuple('Relation', 'type subtype category origin destination')
@@ -118,15 +129,58 @@ def anno2rels(anno):
     rels = []
     for type_, d in anno['relationships'].items():
         for subtype, dd in d.items():
-            category = dd['category']
-            origin = dd['origin']
-            destination = dd['destination']
-            rel = Relation(type_, subtype, category, origin, destination)
-            rels.append(rel)
+            for rel_id, ddd in dd.items():
+                category = ddd['category']
+                origin = ddd['origin']
+                destination = ddd['destination']
+                rel = Relation(type_, subtype, category, origin, destination)
+                rels.append(rel)
     return rels
 
-
 def prepro_annos(args):
+    data_dir = args.data_dir
+    target_dir = args.target_dir
+    vocab_path = os.path.join(target_dir, "vocab.json")
+    vocab = json.load(open(vocab_path, "r"))
+    facts_path = os.path.join(target_dir, "fats.json")
+    meta_data_path = os.path.join(target_dir, "meta_data.json")
+    meta_data = json.load(open(meta_data_path, "r"))
+    facts_dict = {}
+    annos_dir = os.path.join(data_dir, "annotations")
+    anno_names = [name for name in os.listdir(annos_dir) if name.endswith(".json")]
+    max_fact_size = 0
+    max_num_facts = 0
+    pbar = get_pbar(len(anno_names))
+    pbar.start()
+    for i, anno_name in enumerate(anno_names):
+        image_name, _ = os.path.splitext(anno_name)
+        image_id, _ = os.path.splitext(image_name)
+        anno_path = os.path.join(annos_dir, anno_name)
+        anno = json.load(open(anno_path, 'r'))
+        rels = anno2rels(anno)
+        text_facts = [rel2text(anno, rel) for rel in rels]
+        text_facts = [fact for fact in text_facts if fact is not None]
+        tokenized_facts = [_tokenize(fact) for fact in text_facts]
+        indexed_facts = [_vlup(vocab, fact) for fact in tokenized_facts]
+        facts_dict[image_id] = indexed_facts
+        if len(indexed_facts) > 0:
+            max_fact_size = max(max_fact_size, max(len(fact) for fact in indexed_facts))
+        max_num_facts = max(max_num_facts, len(indexed_facts))
+        pbar.update(i)
+    pbar.finish()
+
+    meta_data['max_fact_size'] = max_fact_size
+    meta_data['max_num_facts'] = max_num_facts
+    print("number of facts: %d" % sum(len(facts) for facts in facts_dict.values()))
+    print("max fact size: %d" % max_fact_size)
+    print("max_num_facts: %d" % max_num_facts)
+    print("dumping json files ... ", end="", flush=True)
+    json.dump(meta_data, open(meta_data_path, 'w'))
+    json.dump(facts_dict, open(facts_path, 'w'))
+    print("done")
+
+
+def prepro_annos_old(args):
     """
     for each annotation file,
     [{'type': type_num,
@@ -418,7 +472,6 @@ if __name__ == "__main__":
     ARGS = get_args()
     create_meta_data(ARGS)
     create_image_ids_and_paths(ARGS)
-    # copy_folds(ARGS)
     build_vocab(ARGS)
     prepro_annos(ARGS)
     prepro_questions(ARGS)
