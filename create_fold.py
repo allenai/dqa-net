@@ -52,8 +52,8 @@ def create_categorized_fold():
     test_cats = cats[mid:]
     print("train categories: %s" % ", ".join(train_cats))
     print("test categories: %s" % ", ".join(test_cats))
-    train_ids = list(set.union(*[ids_dict[cat] for cat in train_cats]))
-    test_ids = list(set.union(*[ids_dict[cat] for cat in test_cats]))
+    train_ids = sorted(set.union(*[ids_dict[cat] for cat in train_cats]), key=lambda x: int(x))
+    test_ids = sorted(set.union(*[ids_dict[cat] for cat in test_cats]), key=lambda x: int(x))
     fold = {'train': train_ids, 'test': test_ids, 'trainCats': train_cats, 'testCats': test_cats}
     json.dump(fold, open(args.fold_path, "w"))
 

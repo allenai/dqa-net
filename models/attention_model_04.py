@@ -72,8 +72,6 @@ class LSTMSentenceEncoder(object):
         # self.emb_mat = tf.get_variable("emb_mat", [self.V, self.d])
         self.emb_mat = tf.placeholder('float', shape=[self.V, self.d], name='emb_mat')
         self.single_cell = rnn_cell.BasicLSTMCell(self.d, forget_bias=0.0)
-        if params.train:
-            self.single_cell = tf.nn.rnn_cell.DropoutWrapper(self.single_cell, output_keep_prob=params.keep_prob)
         self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
 
     def __call__(self, sentence, init_hidden_state=None, name='s'):
@@ -87,8 +85,6 @@ class LSTMSentenceEncoder(object):
         d, L =  self.d, self.L
         J = sentence.shape[-1]
         Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x, "Ax")  # [N, C, J, d]
-        if self.params.train:
-            Ax = tf.nn.dropout(Ax, keep_prob=self.params.keep_prob, name="Ax_do")
         F = reduce(mul, sentence.shape[:-1], 1)
         init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
         Ax_flat = tf.reshape(Ax, [F, J, d])
@@ -246,8 +242,6 @@ class AttentionModel(BaseModel):
 
         with tf.variable_scope('m'):
             image = self.image
-            if params.train:
-                image = tf.nn.dropout(image, params.keep_prob)
             image_trans_mat = tf.get_variable('I', shape=[G, d])
             image_trans_bias = tf.get_variable('bI', shape=[])
             g = tf.tanh(tf.matmul(image, image_trans_mat) + image_trans_bias, name='g')  # [N, d]

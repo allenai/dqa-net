@@ -2,7 +2,7 @@ import argparse
 import os
 import json
 import shutil
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import re
 import random
 
@@ -13,9 +13,9 @@ import numpy as np
 from utils import get_pbar
 
 
-
 def qa2hypo(question, answer):
     return "%s %s" % (question, answer)
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -26,6 +26,7 @@ def get_args():
     parser.add_argument("--vgg_model_path", default="~/caffe-models/vgg-19.caffemodel")
     parser.add_argument("--vgg_proto_path", default="~/caffe-models/vgg-19.prototxt")
     return parser.parse_args()
+
 
 def _tokenize(raw):
     tokens = re.findall(r"[\w]+", raw)
@@ -49,7 +50,7 @@ def _vlup(vocab_dict, words):
     return [_vget(vocab_dict, word) for word in words]
 
 
-def _get_text(vocab_dict, anno, key):
+def _get_text_old(vocab_dict, anno, key):
     if key[0] == 'T':
         value = anno['text'][key]['value']
         repText = anno['text'][key]['replacementText']
@@ -58,8 +59,20 @@ def _get_text(vocab_dict, anno, key):
         if 'text' in anno['objects'][key]:
             if len(anno['objects'][key]['text']) > 0:
                 new_key = anno['objects'][key]['text'][0]
-                return _get_text(vocab_dict, anno, new_key)
+                return _get_text_old(vocab_dict, anno, new_key)
     return [], []
+
+
+def _get_text(anno, key):
+    if key[0] == 'T':
+        value = anno['text'][key]['value']
+    elif key[0] == 'O':
+        d = anno['objects'][key]
+        if 'text' in d and len(d['text']) > 0:
+            new_key = d['text'][0]
+            return _get_text(anno, new_key)
+    return None
+
 
 
 def _get_center(anno, key):
@@ -91,6 +104,26 @@ def _get_1hot_vector(dim, idx):
     arr = [0] * dim
     arr[idx] = 1
     return arr
+
+
+def rel2text(anno, rel):
+    tup = anno[:3]
+    if tup == ('interObject', 'linkage', 'objectToObject'):
+        template = "There is an arrow from %s to %s."
+
+
+Relation = namedtuple('Relation', 'type subtype category origin destination')
+
+def anno2rels(anno):
+    rels = []
+    for type_, d in anno['relationships'].items():
+        for subtype, dd in d.items():
+            category = dd['category']
+            origin = dd['origin']
+            destination = dd['destination']
+            rel = Relation(type_, subtype, category, origin, destination)
+            rels.append(rel)
+    return rels
 
 
 def prepro_annos(args):
@@ -164,8 +197,8 @@ def prepro_annos(args):
                     idx = hot_index_dict[(rel_type, rel_subtype, category)]
                     # type_ = _get_1hot_vector(dim, idx)
                     type_ = idx
-                    origin_text, origin_rep = _get_text(vocab, anno, origin_key)
-                    dest_text, dest_rep = _get_text(vocab, anno, dest_key)
+                    origin_text, origin_rep = _get_text_old(vocab, anno, origin_key)
+                    dest_text, dest_rep = _get_text_old(vocab, anno, dest_key)
                     max_label_size = max(max_label_size, len(origin_text), len(dest_text))
                     # relation = dict(type=type_, l0=origin_center, l1=dest_center, lh=head_center, la=arrow_center, t0=origin_text, t1=dest_text)
                     pred = origin_center + dest_center + head_center + arrow_center
