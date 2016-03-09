@@ -127,6 +127,8 @@ Relation = namedtuple('Relation', 'type subtype category origin destination')
 
 def anno2rels(anno):
     rels = []
+    if 'relationships' not in anno:
+        return rels
     for type_, d in anno['relationships'].items():
         for subtype, dd in d.items():
             for rel_id, ddd in dd.items():
