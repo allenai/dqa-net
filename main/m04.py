@@ -73,8 +73,8 @@ def main(_):
     config.num_choices = meta_data['num_choices']
     config.vocab_size = meta_data['vocab_size']
     config.main_name = __name__
-    emb_mat_path = os.path.join(config.data_dir, 'emb_mat.h5')
-    config.emb_mat = h5py.File(emb_mat_path, 'r')['data'][:]
+    init_emb_mat_path = os.path.join(config.data_dir, 'init_emb_mat.h5')
+    config.init_emb_mat = h5py.File(init_emb_mat_path, 'r')['data'][:]
 
     eval_dir = "evals/%s" % config.model_name
     eval_subdir = os.path.join(eval_dir, "config_%s" % str(config.config).zfill(2))

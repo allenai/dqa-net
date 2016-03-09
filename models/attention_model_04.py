@@ -69,8 +69,9 @@ class LSTMSentenceEncoder(object):
     def __init__(self, params):
         self.params = params
         self.V, self.d, self.L = params.vocab_size, params.hidden_size, params.rnn_num_layers
-        # self.emb_mat = tf.get_variable("emb_mat", [self.V, self.d])
-        self.emb_mat = tf.placeholder('float', shape=[self.V, self.d], name='emb_mat')
+        # self.init_emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
+        self.init_emb_mat = tf.placeholder('float', shape=[self.V, self.d], name='init_emb_mat')
+        self.emb_mat = tf.tanh(nn.linear(self.V, self.d, self.d, self.init_emb_mat))
         self.single_cell = rnn_cell.BasicLSTMCell(self.d, forget_bias=0.0)
         self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
 
@@ -84,7 +85,7 @@ class LSTMSentenceEncoder(object):
         assert isinstance(sentence, Sentence)
         d, L =  self.d, self.L
         J = sentence.shape[-1]
-        Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x, "Ax")  # [N, C, J, d]
+        Ax = tf.nn.embedding_lookup(self.init_emb_mat, sentence.x, "Ax")  # [N, C, J, d]
         F = reduce(mul, sentence.shape[:-1], 1)
         init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
         Ax_flat = tf.reshape(Ax, [F, J, d])
@@ -224,7 +225,7 @@ class AttentionModel(BaseModel):
 
         with tf.variable_scope('first_u'):
             sent_encoder = LSTMSentenceEncoder(params)
-            self.emb_mat = sent_encoder.emb_mat
+            self.init_emb_mat = sent_encoder.init_emb_mat
             first_u = sent_encoder(self.s, name='first_u')
 
         layers = []
@@ -241,16 +242,14 @@ class AttentionModel(BaseModel):
         o_sum = sum(layer.o for layer in layers)
 
         with tf.variable_scope('m'):
-            image = self.image
-            image_trans_mat = tf.get_variable('I', shape=[G, d])
-            image_trans_bias = tf.get_variable('bI', shape=[])
-            g = tf.tanh(tf.matmul(image, image_trans_mat) + image_trans_bias, name='g')  # [N, d]
+            image = self.image  # [N, G]
+            g = tf.tanh(nn.linear(N, G, d, image))  # [N, d]
             aug_g = tf.expand_dims(g, 2, name='aug_g')  # [N, d, 1]
 
         with tf.variable_scope('yp'):
             # self.logit = tf.squeeze(tf.batch_matmul(last_layer.u + last_layer.o, aug_g), [2])  # [N, C]
             image_logit = tf.squeeze(tf.batch_matmul(first_u, aug_g), [2])  # [N, C]
-            memory_logit = tf.reduce_sum(first_u * o_sum, 2)  # [N, C]
+            memory_logit = nn.prod_sum_sim([N, C, d], first_u, o_sum)
             if params.mode == 'l':
                 self.fake_var = tf.get_variable('fake', shape=[d])
                 self.logit = tf.reduce_sum(first_u, 2)
@@ -298,7 +297,7 @@ class AttentionModel(BaseModel):
         m = self._prepro_relations_batch(relations_batch)
         g = self._prepro_images_batch(images_batch)
         y_batch = self._prepro_label_batch(label_batch)
-        feed_dict = {self.y: y_batch, self.image: g, self.emb_mat: self.params.emb_mat}
+        feed_dict = {self.y: y_batch, self.image: g, self.init_emb_mat: self.params.init_emb_mat}
         self.s.add(feed_dict, *s)
         self.m.add(feed_dict, *m)
         return feed_dict

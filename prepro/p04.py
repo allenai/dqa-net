@@ -282,7 +282,7 @@ def build_vocab(args):
     target_dir = args.target_dir
     min_count = args.min_count
     vocab_path = os.path.join(target_dir, "vocab.json")
-    emb_mat_path = os.path.join(target_dir, "emb_mat.h5")
+    emb_mat_path = os.path.join(target_dir, "init_emb_mat.h5")
     questions_dir = os.path.join(data_dir, "questions")
     annos_dir = os.path.join(data_dir, "annotations")
     meta_data_path = os.path.join(target_dir, "meta_data.json")

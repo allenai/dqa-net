@@ -69,7 +69,7 @@ class LSTMSentenceEncoder(object):
     def __init__(self, params):
         self.params = params
         self.V, self.d, self.L = params.vocab_size, params.hidden_size, params.rnn_num_layers
-        self.emb_mat = tf.get_variable("emb_mat", [self.V, self.d])
+        self.emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
         self.single_cell = rnn_cell.BasicLSTMCell(self.d, forget_bias=0.0)
         if params.train:
             self.single_cell = tf.nn.rnn_cell.DropoutWrapper(self.single_cell, output_keep_prob=params.keep_prob)

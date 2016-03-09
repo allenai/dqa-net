@@ -67,7 +67,7 @@ class SentenceEncoder(object):
 class LSTMSentenceEncoder(object):
     def __init__(self, params):
         self.V, self.d, self.L = params.vocab_size, params.hidden_size, params.rnn_num_layers
-        self.emb_mat = tf.get_variable("emb_mat", [self.V, self.d])
+        self.emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
         self.single_cell = rnn_cell.BasicLSTMCell(self.d, forget_bias=0.0)
         self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
 
