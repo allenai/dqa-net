@@ -255,6 +255,8 @@ class AttentionModel(BaseModel):
                 self.logit = tf.reduce_sum(first_u, 2)
             elif params.mode == 'lc':
                 self.logit = image_logit
+            elif params.mode == 'la':
+                self.logit = memory_logit
             elif params.mode == 'lca':
                 self.logit = memory_logit + image_logit
             self.yp = tf.nn.softmax(self.logit, name='yp')
