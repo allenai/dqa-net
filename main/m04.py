@@ -71,6 +71,7 @@ def main(_):
     config.max_num_facts = meta_data['max_num_facts']
     config.num_choices = meta_data['num_choices']
     config.vocab_size = meta_data['vocab_size']
+    config.word_size = meta_data['word_size']
     config.main_name = __name__
     init_emb_mat_path = os.path.join(config.data_dir, 'init_emb_mat.h5')
     config.init_emb_mat = h5py.File(init_emb_mat_path, 'r')['data'][:]

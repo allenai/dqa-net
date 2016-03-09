@@ -65,10 +65,10 @@ class SentenceEncoder(object):
 class LSTMSentenceEncoder(object):
     def __init__(self, params):
         self.params = params
-        self.V, self.d, self.L = params.vocab_size, params.hidden_size, params.rnn_num_layers
+        self.V, self.d, self.L, self.e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
         # self.init_emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
-        self.init_emb_mat = tf.placeholder('float', shape=[self.V, self.d], name='init_emb_mat')
-        self.emb_mat = tf.tanh(nn.linear(self.V, self.d, self.d, self.init_emb_mat))
+        self.init_emb_mat = tf.placeholder('float', shape=[self.V, self.e], name='init_emb_mat')
+        self.emb_mat = tf.tanh(nn.linear(self.V, self.e, self.d, self.init_emb_mat))
         self.single_cell = rnn_cell.BasicLSTMCell(self.d, forget_bias=0.0)
         self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
 
@@ -112,7 +112,7 @@ class Layer(object):
         with tf.variable_scope("output"):
             output_encoder = input_encoder  # RelationEncoder(params)
 
-        f = input_encoder(memory)  # [N, R, d]
+        f = input_encoder(memory, name='f')  # [N, R, d]
         c = f  # output_encoder(memory)  # [N, R, d]
         u = tf.identity(u or prev_layer.u + prev_layer.o, name="u")  # [N, C, d]
 
