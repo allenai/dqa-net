@@ -71,7 +71,7 @@ def read_data(params, mode):
     batch_size = params.batch_size
     sentss, answers, relationss, images = [], [], [], []
     for image_id in cur_image_ids:
-        if image_id not in sentss_dict:
+        if image_id not in sentss_dict or image_id not in relations_dict:
             continue
         relations = relations_dict[image_id]
         image = images_h5['data'][image_id2idx[image_id]]
