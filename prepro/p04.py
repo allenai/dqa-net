@@ -15,8 +15,8 @@ from utils import get_pbar
 
 def qa2hypo(question, answer, flag):
     if flag == 'True':
-        import qa2hypo.qa2hypo
-        return qa2hypo.qa2hypo(question, answer)
+        from qa2hypo import qa2hypo as f
+        return f(question, answer, False)
     return "%s %s" % (question, answer)
 
 
@@ -169,7 +169,7 @@ def anno2rels(anno):
     rels = []
     # Unary relations
     for text_id, d in anno['text'].items():
-        category = d['category']
+        category = d['category'] if 'category' in d else ''
         rel = Relation('unary', '', category, [text_id], '')
         rels.append(rel)
 
