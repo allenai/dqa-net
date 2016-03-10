@@ -10,11 +10,13 @@ from pprint import pprint
 import h5py
 import numpy as np
 
-# from qa2hypo import qa2hypo
 from utils import get_pbar
 
 
-def qa2hypo(question, answer):
+def qa2hypo(question, answer, flag):
+    if flag == 'True':
+        import qa2hypo.qa2hypo
+        return qa2hypo.qa2hypo(question, answer)
     return "%s %s" % (question, answer)
 
 
@@ -27,6 +29,7 @@ def get_args():
     parser.add_argument("--vgg_model_path", default="~/caffe-models/vgg-19.caffemodel")
     parser.add_argument("--vgg_proto_path", default="~/caffe-models/vgg-19.prototxt")
     parser.add_argument("--debug", default='False')
+    parser.add_argument("--qa2hypo", defaul='False')
     return parser.parse_args()
 
 
@@ -366,7 +369,7 @@ def prepro_questions(args):
         for ques_id, (ques_text, d) in enumerate(ques['questions'].items()):
             if d['abcLabel']:
                 continue
-            sents = [_vlup(vocab, _tokenize(qa2hypo(ques_text, choice))) for choice in d['answerTexts']]
+            sents = [_vlup(vocab, _tokenize(qa2hypo(ques_text, choice, args.qa2hypo))) for choice in d['answerTexts']]
             assert not num_choices or num_choices == len(sents), "number of choices don't match: %s" % ques_name
             num_choices = len(sents)
             # TODO : one hot vector or index?
