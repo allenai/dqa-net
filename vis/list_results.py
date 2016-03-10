@@ -84,7 +84,7 @@ def list_results(args):
     os.mkdir(html_dir)
 
     cur_dir = os.path.dirname(os.path.realpath(__file__))
-    templates_dir = os.path.join(cur_dir, 'TEMPLATES')
+    templates_dir = os.path.join(cur_dir, 'templates')
     env = Environment(loader=FileSystemLoader(templates_dir))
     template = env.get_template(args.template_name)
 
