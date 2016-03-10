@@ -144,7 +144,7 @@ def main(_):
             writer = tf.train.SummaryWriter(config.log_dir, sess.graph_def)
             if config.load:
                 model.load(sess)
-            eval_tensors = [model.yp, model.last_layer.p]
+            eval_tensors = [model.yp, model.last_layer.p, model.last_layer.sig]
             model.train(sess, writer, train_ds, val_ds, eval_tensors=eval_tensors)
         else:
             model.load(sess)
