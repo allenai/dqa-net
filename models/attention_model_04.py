@@ -231,6 +231,7 @@ class AttentionModel(BaseModel):
         summaries.append(tf.histogram_summary(last_layer.p.op.name, last_layer.p))
         summaries.append(tf.histogram_summary(last_layer.sig.op.name, last_layer.sig))
         summaries.append(tf.scalar_summary("%s (raw)" % self.total_loss.op.name, self.total_loss))
+        summaries.append(tf.scalar_summary("%s" % last_layer.base.op.name, last_layer.base))
         self.merged_summary = tf.merge_summary(summaries)
 
     def _get_feed_dict(self, batch):
