@@ -42,13 +42,19 @@ def _decode_sent(decoder, sent):
 def list_results(args):
     model_num = args.model_num
     config_num = args.config_num
+    data_type = args.data_type
+    global_step =args.global_step
     configs = importlib.import_module("configs.c%s" % str(model_num).zfill(2)).configs
     config = configs[config_num]
     evals_dir = os.path.join("evals", "m%s" % str(model_num).zfill(2), "c%s" % str(config_num).zfill(2))
-    evals_name = "%s_%s.json" % (args.data_type, str(args.global_step).zfill(8))
+    evals_name = "%s_%s.json" % (data_type, str(global_step).zfill(8))
     evals_path = os.path.join(evals_dir, evals_name)
     evals = json.load(open(evals_path, 'r'))
 
+    fold_path = config['fold_path']
+    fold = json.load(open(fold_path, 'r'))
+    fold_data_type = 'test' if data_type == 'val' else data_type
+    image_ids = sorted(fold[fold_data_type], key=lambda x: int(x))
 
     prepro_dir = config['data_dir']
     meta_data_dir = os.path.join(prepro_dir, "meta_data.json")
@@ -93,8 +99,9 @@ def list_results(args):
     headers = ['iid', 'qid', 'image', 'sents', 'answer', 'annotations', 'relations'] + eval_names
     rows = []
     pbar = get_pbar(len(sentss_dict)).start()
-    image_ids = sorted(sentss_dict.keys(), key=lambda x: int(x))
     for i, image_id in enumerate(image_ids):
+        if image_id not in sentss_dict:
+            continue
         sentss = sentss_dict[image_id]
         answers = answers_dict[image_id]
         facts = facts_dict[image_id]

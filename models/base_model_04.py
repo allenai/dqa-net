@@ -88,10 +88,13 @@ class BaseModel(object):
     def eval(self, sess, eval_data_set, is_val=False, eval_tensors=None):
         eval_names = [os.path.basename(tensor.name) for tensor in eval_tensors]
         params = self.params
+        """
         if is_val:
             num_batches = params.val_num_batches
         else:
             num_batches = params.test_num_batches
+        """
+        num_batches = eval_data_set.num_batches
         num_corrects, total = 0, 0
         eval_values = []
         idxs= []
