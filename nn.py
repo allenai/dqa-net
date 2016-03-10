@@ -1,3 +1,4 @@
+import operator
 from operator import mul
 from functools import reduce
 
@@ -9,11 +10,30 @@ VERY_SMALL_NUMBER = -1e10
 def softmax_with_mask(shape, x, mask, name=None):
     if name is None:
         name = softmax_with_mask.__name__
-    x_masked = x # + VERY_SMALL_NUMBER * (1 - mask)
+    x_masked = x + VERY_SMALL_NUMBER * (1.0 - mask)
     x_flat = tf.reshape(x_masked, [reduce(mul, shape[:-1], 1), shape[-1]])
     p_flat = tf.nn.softmax(x_flat)
     p = tf.reshape(p_flat, shape, name=name)
     return p
+
+
+def significance(shape, x, mask=None, name='sig', val=1):
+    if mask is not None:
+        x += VERY_SMALL_NUMBER * (1.0 - mask)
+    constant_shape = shape[:-1] + [1]
+    constant = tf.constant(val, shape=constant_shape, dtype='float')
+    c_shape = shape[:-1] + [shape[-1] + 1]
+    c = tf.concat(len(shape)-1, [constant, x])
+    c_flat = tf.reshape(c, [reduce(mul, shape[:-1], 1), c_shape[-1]])
+    p_flat = tf.nn.softmax(c_flat)
+    p_cat = tf.reshape(p_flat, c_shape)
+    s_aug = tf.slice(p_cat, [0 for _ in shape], [i for i in shape[:-1]] + [1])
+    s = tf.squeeze(s_aug, [len(shape)-1])
+    sig = tf.sub(1.0, s, name="sig")
+    # p = tf.slice(p_cat, [0 for _ in shape[:-1]] + [1], shape)
+    return sig
+
+
 
 
 def prod_sum_sim(shape, u, v, name='prod_sum'):
@@ -37,12 +57,15 @@ def prod_sum_sim(shape, u, v, name='prod_sum'):
         return logit
 
 
-def linear(batch_size, input_dim, output_dim, input_, name="linear"):
-    N, a, b = batch_size, input_dim, output_dim
+def linear(shape, output_dim, input_, name="linear"):
+    a = shape[-1]
+    b = output_dim
+    input_flat = tf.reshape(input_, [reduce(operator.mul, shape[:-1], 1), a])
     with tf.variable_scope(name):
         mat = tf.get_variable("mat", shape=[a, b])
         bias = tf.get_variable("bias", shape=[b])
-        out = tf.matmul(input_, mat) + bias
+        out_flat = tf.matmul(input_flat, mat) + bias
+        out = tf.reshape(out_flat, shape[:-1] + [b])
         return out
 
 

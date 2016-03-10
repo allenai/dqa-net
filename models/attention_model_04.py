@@ -68,7 +68,7 @@ class LSTMSentenceEncoder(object):
         self.V, self.d, self.L, self.e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
         # self.init_emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
         self.init_emb_mat = tf.placeholder('float', shape=[self.V, self.e], name='init_emb_mat')
-        self.emb_mat = tf.tanh(nn.linear(self.V, self.e, self.d, self.init_emb_mat))
+        self.emb_mat = tf.tanh(nn.linear([self.V, self.e], self.d, self.init_emb_mat))
         self.single_cell = rnn_cell.BasicLSTMCell(self.d, forget_bias=0.0)
         self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
 
@@ -121,13 +121,15 @@ class Layer(object):
             c_aug = tf.expand_dims(c, 1)  # [N, 1, R, d]
             u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
             u_tiled = tf.tile(u_aug, [1, 1, R, 1])  # [N, C, R, d]
-            ur = tf.reduce_sum(u_tiled * f_aug, 3, name='uf')  # [N, C, R]
+            uf = tf.reduce_sum(u_tiled * f_aug, 3, name='uf')  # [N, C, R]
             f_mask_aug = tf.expand_dims(memory.m_mask, 1)  # [N, 1, R]
             if linear_start:
-                p = tf.reduce_sum(tf.mul(ur, f_mask_aug, name='p'), 3)  # [N, C, R]
+                p = tf.reduce_sum(tf.mul(uf, f_mask_aug, name='p'), 3)  # [N, C, R]
             else:
-                p = nn.softmax_with_mask([N, C, R], ur, f_mask_aug)  # [N, C, R]
+                p = nn.softmax_with_mask([N, C, R], uf, f_mask_aug)  # [N, C, R]
                 p_debug = tf.reduce_sum(p, 2)  # must be 1!
+            sig = nn.significance([N, C, R], uf, f_mask_aug)  # [N, C]
+
 
         with tf.name_scope('o'):
             c_tiled = tf.tile(c_aug, [1, C, 1, 1])  # [N, C, R, d]
@@ -139,6 +141,7 @@ class Layer(object):
         self.p_debug = p_debug
         self.u = u
         self.o = o
+        self.sig = sig
         self.input_encoder = input_encoder
         self.output_encoder = output_encoder
 
@@ -179,22 +182,19 @@ class AttentionModel(BaseModel):
 
         with tf.variable_scope('f'):
             image = self.image  # [N, G]
-            g = tf.tanh(nn.linear(N, G, d, image))  # [N, d]
+            g = tf.tanh(nn.linear([N, G], d, image))  # [N, d]
             aug_g = tf.expand_dims(g, 2, name='aug_g')  # [N, d, 1]
 
         with tf.variable_scope('yp'):
             # self.logit = tf.squeeze(tf.batch_matmul(last_layer.u + last_layer.o, aug_g), [2])  # [N, C]
             image_logit = tf.squeeze(tf.batch_matmul(first_u, aug_g), [2])  # [N, C]
-            memory_logit = nn.prod_sum_sim([N, C, d], first_u, o_sum)
+            memory_logit = tf.reduce_sum(first_u * o_sum, 2)# nn.prod_sum_sim([N, C, d], first_u, o_sum)
+            sent_logit =  tf.squeeze(nn.linear([N, C, d], 1, first_u), [2])
             if params.mode == 'l':
-                self.fake_var = tf.get_variable('fake', shape=[d])
-                self.logit = tf.reduce_sum(first_u, 2)
-            elif params.mode == 'lc':
-                self.logit = image_logit
+                self.logit = sent_logit
             elif params.mode == 'la':
-                self.logit = memory_logit
-            elif params.mode == 'lca':
-                self.logit = memory_logit + image_logit
+                sig = last_layer.sig
+                self.logit = sig * memory_logit + (1 - sig) * sent_logit
             self.yp = tf.nn.softmax(self.logit, name='yp')
 
         with tf.name_scope('loss') as loss_scope:
@@ -222,6 +222,7 @@ class AttentionModel(BaseModel):
         summaries.append(tf.histogram_summary(last_layer.u.op.name, last_layer.u))
         summaries.append(tf.histogram_summary(last_layer.o.op.name, last_layer.o))
         summaries.append(tf.histogram_summary(last_layer.p.op.name, last_layer.p))
+        summaries.append(tf.histogram_summary(last_layer.sig.op.name, last_layer.sig))
         summaries.append(tf.scalar_summary("%s (raw)" % self.total_loss.op.name, self.total_loss))
         self.merged_summary = tf.merge_summary(summaries)
 

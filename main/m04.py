@@ -44,7 +44,7 @@ flags.DEFINE_boolean("gpu", False, 'Enable GPU? (Linux only) [False]')
 flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
 flags.DEFINE_integer("config", 0, "Config number to load. 0 to use currently defined config. [0]")
-flags.DEFINE_string("mode", "lc", "lc | lca [lc]")
+flags.DEFINE_string("mode", "la", "l | la [la]")
 
 # Debugging
 flags.DEFINE_boolean("draft", False, "Draft? (quick build) [False]")
