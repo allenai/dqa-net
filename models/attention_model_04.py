@@ -91,7 +91,7 @@ class LSTMSentenceEncoder(object):
         Ax_flat_split = [tf.squeeze(x_flat_each, [1])
                          for x_flat_each in tf.split(1, J, Ax_flat)]
         o_flat, h_flat = rnn.rnn(self.cell, Ax_flat_split, init_hidden_state, sequence_length=x_len_flat)
-        tf.get_variable_scope().reuse_variables()
+        # tf.get_variable_scope().reuse_variables()
         return h_flat
 
 
@@ -128,7 +128,13 @@ class Layer(object):
             else:
                 p = nn.softmax_with_mask([N, C, R], uf, f_mask_aug)  # [N, C, R]
                 p_debug = tf.reduce_sum(p, 2)  # must be 1!
-            sig = nn.significance([N, C, R], uf, f_mask_aug)  # [N, C]
+
+            if prev_layer is None:
+                base = tf.get_variable('base', shape=[], dtype='float')
+            else:
+                base = prev_layer.base
+            sig, _ = nn.softmax_with_base([N, C, R], base, uf, f_mask_aug)  # [N, C]
+
 
 
         with tf.name_scope('o'):
@@ -142,6 +148,7 @@ class Layer(object):
         self.u = u
         self.o = o
         self.sig = sig
+        self.base = base
         self.input_encoder = input_encoder
         self.output_encoder = output_encoder
 

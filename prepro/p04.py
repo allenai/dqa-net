@@ -26,6 +26,7 @@ def get_args():
     parser.add_argument("--min_count", type=int, default=5)
     parser.add_argument("--vgg_model_path", default="~/caffe-models/vgg-19.caffemodel")
     parser.add_argument("--vgg_proto_path", default="~/caffe-models/vgg-19.prototxt")
+    parser.add_argument("--debug", default='False')
     return parser.parse_args()
 
 
@@ -142,6 +143,14 @@ def anno2rels(anno):
 def prepro_annos(args):
     data_dir = args.data_dir
     target_dir = args.target_dir
+
+    # For debugging
+    if args.debug == 'True':
+        sents_path =os.path.join(target_dir, "sents.json")
+        answers_path =os.path.join(target_dir, "answers.json")
+        sentss_dict = json.load(open(sents_path, 'r'))
+        answers_dict = json.load(open(answers_path, 'r'))
+
     vocab_path = os.path.join(target_dir, "vocab.json")
     vocab = json.load(open(vocab_path, "r"))
     facts_path = os.path.join(target_dir, "facts.json")
@@ -164,11 +173,18 @@ def prepro_annos(args):
         text_facts = [fact for fact in text_facts if fact is not None]
         tokenized_facts = [_tokenize(fact) for fact in text_facts]
         indexed_facts = [_vlup(vocab, fact) for fact in tokenized_facts]
+
+        # For debugging only
+        if args.debug == 'True' and image_id in sentss_dict:
+            correct_sents = [sents[answer] for sents, answer in zip(sentss_dict[image_id], answers_dict[image_id])]
+            indexed_facts.extend(correct_sents)
+
         facts_dict[image_id] = indexed_facts
         if len(indexed_facts) > 0:
             max_fact_size = max(max_fact_size, max(len(fact) for fact in indexed_facts))
         max_num_facts = max(max_num_facts, len(indexed_facts))
         pbar.update(i)
+
     pbar.finish()
 
     meta_data['max_fact_size'] = max_fact_size
@@ -475,6 +491,6 @@ if __name__ == "__main__":
     create_meta_data(ARGS)
     create_image_ids_and_paths(ARGS)
     build_vocab(ARGS)
-    prepro_annos(ARGS)
     prepro_questions(ARGS)
+    prepro_annos(ARGS)
     # prepro_images(ARGS)
