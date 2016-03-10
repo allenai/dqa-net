@@ -195,7 +195,7 @@ class AttentionModel(BaseModel):
         with tf.variable_scope('yp'):
             # self.logit = tf.squeeze(tf.batch_matmul(last_layer.u + last_layer.o, aug_g), [2])  # [N, C]
             image_logit = tf.squeeze(tf.batch_matmul(first_u, aug_g), [2])  # [N, C]
-            memory_logit = tf.reduce_sum(first_u * o_sum, 2)# nn.prod_sum_sim([N, C, d], first_u, o_sum)
+            memory_logit = tf.reduce_sum(tf.nn.dropout(first_u * o_sum, keep_prob=params.keep_prob), 2)# nn.prod_sum_sim([N, C, d], first_u, o_sum)
             sent_logit =  tf.squeeze(nn.linear([N, C, d], 1, first_u), [2])
             if params.mode == 'l':
                 self.logit = sent_logit
