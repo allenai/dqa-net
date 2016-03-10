@@ -29,7 +29,7 @@ def get_args():
     parser.add_argument("--vgg_model_path", default="~/caffe-models/vgg-19.caffemodel")
     parser.add_argument("--vgg_proto_path", default="~/caffe-models/vgg-19.prototxt")
     parser.add_argument("--debug", default='False')
-    parser.add_argument("--qa2hypo", defaul='False')
+    parser.add_argument("--qa2hypo", default='False')
     return parser.parse_args()
 
 
@@ -237,7 +237,7 @@ def prepro_annos(args):
     print("number of facts: %d" % sum(len(facts) for facts in facts_dict.values()))
     print("max fact size: %d" % max_fact_size)
     print("max_num_facts: %d" % max_num_facts)
-    print("dumping json files ... ", end="", flush=True)
+    print("dumping json files ... ")
     json.dump(meta_data, open(meta_data_path, 'w'))
     json.dump(facts_dict, open(facts_path, 'w'))
     print("done")
@@ -455,7 +455,7 @@ def build_vocab(args):
 
     features = {}
     word_size = 0
-    print("reading %s ... " % glove_path, end="", flush=True)
+    print("reading %s ... " % glove_path)
     with open(glove_path, 'r') as fp:
         for line in fp:
             array = line.lstrip().rstrip().split(" ")
@@ -486,7 +486,7 @@ def build_vocab(args):
     print("vocab size: %d" % vocab_size)
     print("word size: %d" % word_size)
 
-    print("dumping json file ... ", end="", flush=True)
+    print("dumping json file ... ")
     f.close()
     json.dump(vocab, open(vocab_path, "w"))
     json.dump(meta_data, open(meta_data_path, "w"))
@@ -512,7 +512,7 @@ def create_image_ids_and_paths(args):
     image_ids = [os.path.splitext(name)[0] for name in image_names]
     ordered_image_ids = sorted(image_ids, key=lambda x: int(x))
     ordered_image_names = ["%s.png" % id_ for id_ in ordered_image_ids]
-    print("dumping json files ... ", end="", flush=True)
+    print("dumping json files ... ")
     image_paths = [os.path.join(images_dir, name) for name in ordered_image_names]
     json.dump(ordered_image_ids, open(image_ids_path, "w"))
     json.dump(image_paths, open(image_paths_path, "w"))
