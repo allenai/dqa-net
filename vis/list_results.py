@@ -84,7 +84,7 @@ def list_results(args):
     os.mkdir(html_dir)
 
     cur_dir = os.path.dirname(os.path.realpath(__file__))
-    templates_dir = os.path.join(cur_dir, 'templates')
+    templates_dir = os.path.join(cur_dir, 'TEMPLATES')
     env = Environment(loader=FileSystemLoader(templates_dir))
     template = env.get_template(args.template_name)
 
@@ -97,6 +97,7 @@ def list_results(args):
         eval_dd[tuple(id_)] = eval_d
 
     headers = ['iid', 'qid', 'image', 'sents', 'answer', 'annotations', 'relations'] + eval_names
+    # headers = ['iid', 'qid', 'image', 'sents', 'answer', 'annotations', 'relations', 'p', 'yp']
     rows = []
     pbar = get_pbar(len(sentss_dict)).start()
     for i, image_id in enumerate(image_ids):
@@ -109,6 +110,15 @@ def list_results(args):
         for question_id, (sents, answer) in enumerate(zip(sentss, answers)):
             eval_id = (image_id, question_id)
             eval_d = eval_dd[eval_id] if eval_id in eval_dd else None
+
+            if eval_d:
+                p_all = zip(*eval_d['p:0'])
+                p = p_all[:len(decoded_facts)]
+                p = [[float("%.3f" % x) for x in y] for y in p]
+                y = [float("%.3f" % x) for x in eval_d['yp:0']]
+                eval_d['p:0'] = p
+                eval_d['yp:0']= y
+
             evals = [eval_d[name] if eval_d else "" for name in eval_names]
             image_name = "%s.png" % image_id
             json_name = "%s.json" % image_name

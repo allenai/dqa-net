@@ -20,7 +20,7 @@ parser.add_argument("--template_name", default="list_questions.html")
 
 ARGS = parser.parse_args()
 
-env = Environment(loader=FileSystemLoader('templates'))
+env = Environment(loader=FileSystemLoader('TEMPLATES'))
 
 
 def main(args):

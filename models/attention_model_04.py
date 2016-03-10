@@ -126,7 +126,7 @@ class Layer(object):
             if linear_start:
                 p = tf.reduce_sum(tf.mul(uf, f_mask_aug, name='p'), 3)  # [N, C, R]
             else:
-                p = nn.softmax_with_mask([N, C, R], uf, f_mask_aug)  # [N, C, R]
+                p = nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p')  # [N, C, R]
                 p_debug = tf.reduce_sum(p, 2)  # must be 1!
 
             if prev_layer is None:
@@ -233,6 +233,7 @@ class AttentionModel(BaseModel):
         summaries.append(tf.scalar_summary("%s (raw)" % self.total_loss.op.name, self.total_loss))
         summaries.append(tf.scalar_summary("%s" % last_layer.base.op.name, last_layer.base))
         self.merged_summary = tf.merge_summary(summaries)
+        self.last_layer = last_layer
 
     def _get_feed_dict(self, batch):
         sents_batch, facts_batch, images_batch = batch[:-1]

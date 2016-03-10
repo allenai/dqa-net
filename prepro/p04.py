@@ -107,27 +107,69 @@ def _get_1hot_vector(dim, idx):
     arr[idx] = 1
     return arr
 
+TEMPLATES = ["%s links to %s.",
+             "there is %s.",
+             "the title is %s.",
+             "%s describes region."]
+
 def rel2text(anno, rel):
     MAX_LABEL_SIZE = 3
     tup = rel[:3]
     o_keys, d_keys = rel[3:]
     if tup == ('interObject', 'linkage', 'objectToObject'):
-        template = "There is an arrow from %s to %s."
+        template = TEMPLATES[0]
         o = _get_text(anno, o_keys[0]) if len(o_keys) else None
         d = _get_text(anno, d_keys[0]) if len(d_keys) else None
-        if o and d:
-            o_words = _tokenize(o)
-            d_words = _tokenize(d)
-            if max(len(o_words), len(d_words)) <= MAX_LABEL_SIZE:
-                text = template % (o, d)
-                return text
+        o = o or "an object"
+        d = d or "an object"
+        o_words = _tokenize(o)
+        d_words = _tokenize(d)
+        if len(o_words) > MAX_LABEL_SIZE:
+            o = "an object"
+        if len(d_words) > MAX_LABEL_SIZE:
+            d = "an object"
+        text = template % (o, d)
+        return text
+
+    elif tup == ('intraObject', 'linkage', 'regionDescription'):
+        template = TEMPLATES[3]
+        o = _get_text(anno, o_keys[0]) if len(o_keys) else None
+        o = o or "an object"
+        o_words = _tokenize(o)
+        if len(o_words) > MAX_LABEL_SIZE:
+            o = "an object"
+        text = template % o
+        return text
+
+
+    elif tup == ('unary', '', 'objectLabel'):
+        template = TEMPLATES[1]
+        val =_get_text(anno, o_keys[0])
+        if val is not None:
+            words = _tokenize(val)
+            if len(words) > MAX_LABEL_SIZE:
+                return val
+            else:
+                return template % val
+
+    elif tup == ('unary', '', 'imageTitle'):
+        template = TEMPLATES[2]
+        val = _get_text(anno, o_keys[0])
+        return template % val
     return None
 
 
 Relation = namedtuple('Relation', 'type subtype category origin destination')
 
 def anno2rels(anno):
+    types = set()
     rels = []
+    # Unary relations
+    for text_id, d in anno['text'].items():
+        category = d['category']
+        rel = Relation('unary', '', category, [text_id], '')
+        rels.append(rel)
+
     if 'relationships' not in anno:
         return rels
     for type_, d in anno['relationships'].items():
@@ -138,6 +180,7 @@ def anno2rels(anno):
                 destination = ddd['destination']
                 rel = Relation(type_, subtype, category, origin, destination)
                 rels.append(rel)
+                types.add((type_, subtype, category))
     return rels
 
 def prepro_annos(args):
@@ -162,7 +205,7 @@ def prepro_annos(args):
     max_fact_size = 0
     max_num_facts = 0
     pbar = get_pbar(len(anno_names))
-    pbar.start()
+    # pbar.start()
     for i, anno_name in enumerate(anno_names):
         image_name, _ = os.path.splitext(anno_name)
         image_id, _ = os.path.splitext(image_name)
@@ -173,7 +216,6 @@ def prepro_annos(args):
         text_facts = [fact for fact in text_facts if fact is not None]
         tokenized_facts = [_tokenize(fact) for fact in text_facts]
         indexed_facts = [_vlup(vocab, fact) for fact in tokenized_facts]
-
         # For debugging only
         if args.debug == 'True' and image_id in sentss_dict:
             correct_sents = [sents[answer] for sents, answer in zip(sentss_dict[image_id], answers_dict[image_id])]
@@ -183,9 +225,9 @@ def prepro_annos(args):
         if len(indexed_facts) > 0:
             max_fact_size = max(max_fact_size, max(len(fact) for fact in indexed_facts))
         max_num_facts = max(max_num_facts, len(indexed_facts))
-        pbar.update(i)
+        # pbar.update(i)
 
-    pbar.finish()
+    # pbar.finish()
 
     meta_data['max_fact_size'] = max_fact_size
     meta_data['max_num_facts'] = max_num_facts
@@ -395,6 +437,12 @@ def build_vocab(args):
                     _vadd(word_counter, word)
         pbar.update(i)
     pbar.finish()
+
+    # template
+    for template in TEMPLATES:
+        for word in _tokenize(template):
+            if not word.startswith("%"):
+                _vadd(word_counter, word)
 
     word_list, counts = zip(*sorted([pair for pair in word_counter.items()], key=lambda x: -x[1]))
     freq = 5

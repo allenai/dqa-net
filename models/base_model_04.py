@@ -51,7 +51,7 @@ class BaseModel(object):
 
         return (num_corrects, total_loss, summary_str, global_step), values
 
-    def train(self, sess, writer, train_data_set, val_data_set):
+    def train(self, sess, writer, train_data_set, val_data_set, eval_tensors=None):
         assert isinstance(train_data_set, DataSet), train_data_set.__class__.__name__
         assert isinstance(val_data_set, DataSet), train_data_set.__class__.__name__
         params = self.params
@@ -77,7 +77,7 @@ class BaseModel(object):
             train_data_set.complete_epoch()
 
             if val_data_set and (epoch_idx + 1) % params.val_period == 0:
-                eval_tensors = [self.yp, self.logit]
+                eval_tensors = eval_tensors if eval_tensors else []
                 self.eval(sess, train_data_set, is_val=True, eval_tensors=eval_tensors)
                 self.eval(sess, val_data_set, is_val=True, eval_tensors=eval_tensors)
 

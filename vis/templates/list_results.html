@@ -49,7 +49,11 @@
                 </td>
                 {% for eval in row.evals %}
                 <td>
-                    {{ eval }}
+                    <ol>
+                    {% for each in eval %}
+                        <li>{{ each }}</li>
+                    {% endfor %}
+                    </ol>
                 </td>
                 {% endfor %}
             </tr>
