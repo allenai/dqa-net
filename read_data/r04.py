@@ -8,7 +8,7 @@ import sys
 
 
 class DataSet(object):
-    def __init__(self, name, batch_size, data, idxs, include_leftover=False):
+    def __init__(self, name, batch_size, data, idxs, idx2id, include_leftover=False):
         self.name = name
         self.num_epochs_completed = 0
         self.idx_in_epoch = 0
@@ -16,16 +16,21 @@ class DataSet(object):
         self.data = data
         self.include_leftover = include_leftover
         self.idxs = idxs
+        self.idx2id = idx2id
         self.num_examples = len(idxs)
         self.num_batches = int(self.num_examples / self.batch_size) + int(self.include_leftover)
         self.reset()
 
-    def get_next_labeled_batch(self):
+    def get_batch_idxs(self):
         assert self.has_next_batch(), "End of data, reset required."
         from_, to = self.idx_in_epoch, self.idx_in_epoch + self.batch_size
         if self.include_leftover and to > self.num_examples:
             to = self.num_examples
         cur_idxs = self.idxs[from_:to]
+        return cur_idxs
+
+    def get_next_labeled_batch(self):
+        cur_idxs = self.get_batch_idxs()
         batch = [[each[i] for i in cur_idxs] for each in self.data]
         self.idx_in_epoch += len(cur_idxs)
         return batch
@@ -72,21 +77,25 @@ def read_data(params, mode):
 
     batch_size = params.batch_size
     sentss, answers, factss, images = [], [], [], []
+    idx = 0
+    idx2id = []
     for image_id in cur_image_ids:
         if image_id not in sentss_dict or image_id not in facts_dict:
             continue
         facts = facts_dict[image_id]
         image = images_h5['data'][image_id2idx[image_id]]
-        for sents, answer in zip(sentss_dict[image_id], answers_dict[image_id]):
+        for sent_id, (sents, answer) in enumerate(zip(sentss_dict[image_id], answers_dict[image_id])):
             sentss.append(sents)
             answers.append(answer)
             factss.append(facts)
             images.append(image)
+            idx2id.append([image_id, sent_id])
+            idx += 1
 
     data = [sentss, factss, images, answers]
     idxs = np.arange(len(answers))
     include_leftover = not params.train
-    data_set = DataSet(mode, batch_size, data, idxs, include_leftover=include_leftover)
+    data_set = DataSet(mode, batch_size, data, idxs, idx2id, include_leftover=include_leftover)
     print("done")
     return data_set
 

@@ -202,7 +202,7 @@ class AttentionModel(BaseModel):
             elif params.mode == 'la':
                 sig = last_layer.sig
                 self.logit = sig * memory_logit + (1 - sig) * sent_logit
-            self.yp = tf.nn.softmax(self.logit, name='yp')
+            self.yp = tf.nn.softmax(self.logit, name='yp')  # [N, C]
 
         with tf.name_scope('loss') as loss_scope:
             self.cross_entropy = tf.nn.softmax_cross_entropy_with_logits(self.logit, tf.cast(self.y, 'float'), name='cross_entropy')

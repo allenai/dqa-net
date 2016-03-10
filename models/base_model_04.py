@@ -1,6 +1,7 @@
 import json
 import os
 
+import itertools
 import numpy as np
 import progressbar as pb
 import tensorflow as tf
@@ -76,7 +77,7 @@ class BaseModel(object):
             train_data_set.complete_epoch()
 
             if val_data_set and (epoch_idx + 1) % params.val_period == 0:
-                eval_tensors = [self.yp]
+                eval_tensors = [self.yp, self.logit]
                 self.eval(sess, train_data_set, is_val=True, eval_tensors=eval_tensors)
                 self.eval(sess, val_data_set, is_val=True, eval_tensors=eval_tensors)
 
@@ -85,6 +86,7 @@ class BaseModel(object):
         print("training done.")
 
     def eval(self, sess, eval_data_set, is_val=False, eval_tensors=None):
+        eval_names = [os.path.basename(tensor.name) for tensor in eval_tensors]
         params = self.params
         if is_val:
             num_batches = params.val_num_batches
@@ -92,24 +94,30 @@ class BaseModel(object):
             num_batches = params.test_num_batches
         num_corrects, total = 0, 0
         eval_values = []
+        idxs= []
         string = "%s:N=%d|" % (eval_data_set.name, eval_data_set.batch_size * num_batches)
         pbar = pb.ProgressBar(widgets=[string, pb.Percentage(), pb.Bar(), pb.ETA()], maxval=num_batches)
         losses = []
         pbar.start()
         for num_batches_completed in range(num_batches):
+            idxs.extend(eval_data_set.get_batch_idxs())
             batch = eval_data_set.get_next_labeled_batch()
             (cur_num_corrects, cur_loss, _, global_step), eval_value_batch = self.eval_batch(sess, batch, eval_tensors=eval_tensors)
             num_corrects += cur_num_corrects
             total += len(batch[0])
-            eval_values.append([x.tolist() for x in eval_value_batch])
+            eval_values.append([x.tolist() for x in eval_value_batch])  # numpy.array.toList
             losses.append(cur_loss)
             pbar.update(num_batches_completed)
         pbar.finish()
         loss = np.mean(losses)
         eval_data_set.reset()
 
+        ids = [eval_data_set.idx2id[idx] for idx in idxs]
+        zipped_eval_values = [list(itertools.chain(*each)) for each in zip(*eval_values)]
+        values = {name: values for name, values in zip(eval_names, zipped_eval_values)}
+        out = {'ids': ids, 'values': values}
         eval_path = os.path.join(params.eval_dir, "%s_%s.json" % (eval_data_set.name, str(int(global_step)).zfill(8)))
-        json.dump(eval_values, open(eval_path, 'w'))
+        json.dump(out, open(eval_path, 'w'))
 
         print("at %d: acc = %.2f%% = %d / %d, loss = %.4f" %
               (global_step, 100 * float(num_corrects)/total, num_corrects, total, loss))

@@ -77,11 +77,11 @@ def main(_):
     config.init_emb_mat = h5py.File(init_emb_mat_path, 'r')['data'][:]
 
     eval_dir = "evals/%s" % config.model_name
-    eval_subdir = os.path.join(eval_dir, "config_%s" % str(config.config).zfill(2))
+    eval_subdir = os.path.join(eval_dir, "c%s" % str(config.config).zfill(2))
     log_dir = "logs/%s" % config.model_name
-    log_subdir = os.path.join(log_dir, "config_%s" % str(config.config).zfill(2))
+    log_subdir = os.path.join(log_dir, "c%s" % str(config.config).zfill(2))
     save_dir = "saves/%s" % config.model_name
-    save_subdir = os.path.join(save_dir, "config_%s" % str(config.config).zfill(2))
+    save_subdir = os.path.join(save_dir, "c%s" % str(config.config).zfill(2))
     config.eval_dir = eval_subdir
     config.log_dir = log_subdir
     config.save_dir = save_subdir
