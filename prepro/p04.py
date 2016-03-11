@@ -55,19 +55,6 @@ def _vlup(vocab_dict, words):
     return [_vget(vocab_dict, word) for word in words]
 
 
-def _get_text_old(vocab_dict, anno, key):
-    if key[0] == 'T':
-        value = anno['text'][key]['value']
-        repText = anno['text'][key]['replacementText']
-        return _vlup(vocab_dict, _tokenize(value)), _vlup(vocab_dict, _tokenize(repText))
-    elif key[0] == 'O':
-        if 'text' in anno['objects'][key]:
-            if len(anno['objects'][key]['text']) > 0:
-                new_key = anno['objects'][key]['text'][0]
-                return _get_text_old(vocab_dict, anno, new_key)
-    return [], []
-
-
 def _get_text(anno, key):
     if key[0] == 'T':
         value = anno['text'][key]['value']
@@ -105,15 +92,13 @@ def _get_head_center(anno, arrow_key):
     return _get_center(anno, head_key)
 
 
-def _get_1hot_vector(dim, idx):
-    arr = [0] * dim
-    arr[idx] = 1
-    return arr
-
 TEMPLATES = ["%s links to %s.",
              "there is %s.",
              "the title is %s.",
-             "%s describes region."]
+             "%s describes region.",
+             "there are %s %s.",
+             "arrows objects regions 0 1 2 3 4 5 6 7 8 9"]
+
 
 def rel2text(anno, rel):
     MAX_LABEL_SIZE = 3
@@ -144,6 +129,15 @@ def rel2text(anno, rel):
         text = template % o
         return text
 
+    elif tup == ('unary', '', 'regionDescriptionNoArrow'):
+        template = TEMPLATES[3]
+        o = _get_text(anno, o_keys[0]) if len(o_keys) else None
+        o = o or "an object"
+        o_words = _tokenize(o)
+        if len(o_words) > MAX_LABEL_SIZE:
+            o = "an object"
+        text = template % o
+        return text
 
     elif tup == ('unary', '', 'objectLabel'):
         template = TEMPLATES[1]
@@ -155,10 +149,21 @@ def rel2text(anno, rel):
             else:
                 return template % val
 
+    elif tup == ('unary', '', 'imageCaption'):
+        val = _get_text(anno, o_keys[0])
+        return val
+
     elif tup == ('unary', '', 'imageTitle'):
         template = TEMPLATES[2]
         val = _get_text(anno, o_keys[0])
         return template % val
+
+    elif tup[0] == 'count':
+        template = TEMPLATES[4]
+        category = tup[2]
+        num = str(o_keys)
+        return template % (num, category)
+
     return None
 
 
@@ -172,6 +177,11 @@ def anno2rels(anno):
         category = d['category'] if 'category' in d else ''
         rel = Relation('unary', '', category, [text_id], '')
         rels.append(rel)
+
+    # Counting
+    rels.append(Relation('count', '', 'arrows', len(anno['arrows']), ''))
+    rels.append(Relation('count', '', 'objects', len(anno['objects']), ''))
+    rels.append(Relation('count', '', 'regions', len(anno['regions']), ''))
 
     if 'relationships' not in anno:
         return rels
@@ -240,102 +250,6 @@ def prepro_annos(args):
     print("dumping json files ... ")
     json.dump(meta_data, open(meta_data_path, 'w'))
     json.dump(facts_dict, open(facts_path, 'w'))
-    print("done")
-
-
-def prepro_annos_old(args):
-    """
-    for each annotation file,
-    [{'type': type_num,
-      'r0': rect,
-      'r1': rect,
-      'rh': rect,
-      'ra': rect,
-      't0': indexed_words,
-      't1': indexed_words}]
-
-    type_num: [intraLabel, intraRegionLabel, interLinkage, intraLinkage,] (arrowDescriptor, arrowHeadTail)
-    :param args:
-    :return:
-    """
-    data_dir = args.data_dir
-    target_dir = args.target_dir
-    vocab_path = os.path.join(target_dir, "vocab.json")
-    vocab = json.load(open(vocab_path, "r"))
-    relations_path = os.path.join(target_dir, "relations.json")
-    meta_data_path = os.path.join(target_dir, "meta_data.json")
-    meta_data = json.load(open(meta_data_path, "r"))
-
-    meta_data['pred_size'] = 2 * 4
-
-    relations_dict = {}
-    dim = 4
-    hot_index_dict = {('intraObject', 'label', 'objectDescription'): 0,
-                      ('intraObject', 'label', 'regionDescriptionNoArrow'): 1,
-                      ('interObject', 'linkage', 'objectToObject'): 2,
-                      ('intraObject', 'linkage', 'regionDescription'): 3,
-                      ('intraObject', 'linkage', 'objectDescription'): 3,
-                      ('intraObject', 'textLinkage', 'textDescription'): 3}
-
-    annos_dir = os.path.join(data_dir, "annotations")
-    anno_names = [name for name in os.listdir(annos_dir) if name.endswith(".json")]
-    max_label_size = 0
-    max_num_rels = 0
-    pbar = get_pbar(len(anno_names))
-    pbar.start()
-    for i, anno_name in enumerate(anno_names):
-        image_name, _ = os.path.splitext(anno_name)
-        image_id, _ = os.path.splitext(image_name)
-        anno_path = os.path.join(annos_dir, anno_name)
-        anno = json.load(open(anno_path, "r", encoding="ISO-8859-1"))
-        relations = []
-        if 'relationships' not in anno:
-            relations_dict[image_id] = relations
-            pbar.update(i)
-            continue
-        for rel_type, d in anno['relationships'].items():
-            for rel_subtype, dd in d.items():
-                if len(dd) == 0:
-                    continue
-                for rel_key, ddd in dd.items():
-                    category = ddd['category']
-                    # FIXME : just choose one for now
-                    origin_key = ddd['origin'][0]
-                    dest_key = ddd['destination'][0]
-                    origin_center = _get_center(anno, origin_key)
-                    dest_center = _get_center(anno, dest_key)
-                    if 'connector' in ddd:
-                        arrow_key = ddd['connector'][0]
-                        arrow_center = _get_center(anno, arrow_key)
-                        head_center = _get_head_center(anno, arrow_key)
-                    else:
-                        arrow_center = [0, 0]
-                        head_center = [0, 0]
-                    idx = hot_index_dict[(rel_type, rel_subtype, category)]
-                    # type_ = _get_1hot_vector(dim, idx)
-                    type_ = idx
-                    origin_text, origin_rep = _get_text_old(vocab, anno, origin_key)
-                    dest_text, dest_rep = _get_text_old(vocab, anno, dest_key)
-                    max_label_size = max(max_label_size, len(origin_text), len(dest_text))
-                    # relation = dict(type=type_, l0=origin_center, l1=dest_center, lh=head_center, la=arrow_center, t0=origin_text, t1=dest_text)
-                    pred = origin_center + dest_center + head_center + arrow_center
-                    assert len(pred) == meta_data['pred_size'], "Wrong predicate size: %d" % len(pred)
-                    relation = dict(a1=origin_text, pred=pred, a2=dest_text, a1r=origin_rep, a2r=dest_rep)
-                    relations.append(relation)
-        # TODO : arrow relations as well?
-        relations_dict[image_id] = relations
-        max_num_rels = max(max_num_rels, len(relations))
-        pbar.update(i)
-    pbar.finish()
-    meta_data['max_label_size'] = max_label_size
-    meta_data['max_num_rels'] = max_num_rels
-
-    print("number of relations: %d" % sum(len(relations) for relations in relations_dict))
-    print('max label size: %d' % max_label_size)
-    print("max num rels: %d" % max_num_rels)
-    print("dumping json file ... ")
-    json.dump(relations_dict, open(relations_path, 'w'))
-    json.dump(meta_data, open(meta_data_path, 'w'))
     print("done")
 
 

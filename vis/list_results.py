@@ -6,6 +6,7 @@ import SocketServer
 import argparse
 import json
 import os
+import numpy as np
 from copy import deepcopy
 
 from jinja2 import Environment, FileSystemLoader
@@ -96,8 +97,8 @@ def list_results(args):
             eval_d[name] = d[idx]
         eval_dd[tuple(id_)] = eval_d
 
-    headers = ['iid', 'qid', 'image', 'sents', 'answer', 'annotations', 'relations'] + eval_names
-    # headers = ['iid', 'qid', 'image', 'sents', 'answer', 'annotations', 'relations', 'p', 'yp']
+    # headers = ['iid', 'qid', 'image', 'sents', 'answer', 'annotations', 'relations'] + eval_names
+    headers = ['iid', 'qid', 'image', 'sents', 'annotations', 'relations', 'p', 'sig', 'yp']
     rows = []
     pbar = get_pbar(len(sentss_dict)).start()
     for i, image_id in enumerate(image_ids):
@@ -115,9 +116,10 @@ def list_results(args):
                 p_all = zip(*eval_d['p:0'])
                 p = p_all[:len(decoded_facts)]
                 p = [[float("%.3f" % x) for x in y] for y in p]
-                y = [float("%.3f" % x) for x in eval_d['yp:0']]
-                eval_d['p:0'] = p
-                eval_d['yp:0']= y
+                yp = [float("%.3f" % x) for x in eval_d['yp:0']]
+                sig = [float("%.3f" % x) for x in eval_d['sig:0']]
+            else:
+                p, yp, sig = []
 
             evals = [eval_d[name] if eval_d else "" for name in eval_names]
             image_name = "%s.png" % image_id
@@ -131,7 +133,12 @@ def list_results(args):
                    'sents': [_decode_sent(decoder, sent) for sent in sents],
                    'answer': answer,
                    'facts': decoded_facts,
-                   'evals': evals}
+                   'p': p,
+                   'sig': sig,
+                   'yp': yp,
+                   'ap': np.argmax(yp)
+                   }
+
             rows.append(row)
 
         if i % args.num_im == 0:
