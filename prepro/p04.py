@@ -144,6 +144,15 @@ def rel2text(anno, rel):
         text = template % o
         return text
 
+    elif tup == ('unary', '', 'regionDescriptionNoArrow'):
+        template = TEMPLATES[3]
+        o = _get_text(anno, o_keys[0]) if len(o_keys) else None
+        o = o or "an object"
+        o_words = _tokenize(o)
+        if len(o_words) > MAX_LABEL_SIZE:
+            o = "an object"
+        text = template % o
+        return text
 
     elif tup == ('unary', '', 'objectLabel'):
         template = TEMPLATES[1]
@@ -155,10 +164,15 @@ def rel2text(anno, rel):
             else:
                 return template % val
 
+    elif tup == ('unary', '', 'imageCaption'):
+        val = _get_text(anno, o_keys[0])
+        return val
+
     elif tup == ('unary', '', 'imageTitle'):
         template = TEMPLATES[2]
         val = _get_text(anno, o_keys[0])
         return template % val
+
     return None
 
 
@@ -212,6 +226,7 @@ def prepro_annos(args):
     for i, anno_name in enumerate(anno_names):
         image_name, _ = os.path.splitext(anno_name)
         image_id, _ = os.path.splitext(image_name)
+        print(image_id)
         anno_path = os.path.join(annos_dir, anno_name)
         anno = json.load(open(anno_path, 'r'))
         rels = anno2rels(anno)
