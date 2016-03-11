@@ -141,7 +141,7 @@ class Layer(object):
                 uf_flat = tf.reshape(uf, [N, C*R])
                 f_mask_tiled_flat = tf.reshape(f_mask_tiled, [N, C*R])
                 p_flat = nn.softmax_with_mask([N, C, R], uf_flat, f_mask_tiled_flat, name='p_flat')  # [N, C, R]
-                p = tf.reshape(p_flat, [N, C, R])
+                p = tf.reshape(p_flat, [N, C, R], name='p')
                 # p_debug = tf.reduce_sum(p, 2)
 
             if prev_layer is None:
