@@ -75,7 +75,7 @@ def list_facts(args):
     for i, image_id in enumerate(image_ids):
         sentss = sentss_dict[image_id]
         answers = answers_dict[image_id]
-        facts = facts_dict[image_id]
+        facts = facts_dict[image_id] if image_id in facts_dict else []
         decoded_facts = [_decode_sent(decoder, fact) for fact in facts]
         for question_id, (sents, answer) in enumerate(zip(sentss, answers)):
             image_name = "%s.png" % image_id
