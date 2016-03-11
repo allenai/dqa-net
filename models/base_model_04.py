@@ -40,7 +40,6 @@ class BaseModel(object):
     def train_batch(self, sess, learning_rate, batch):
         feed_dict = self._get_feed_dict(batch)
         feed_dict[self.learning_rate] = learning_rate
-        self.num_epochs_completed += 1
         return sess.run([self.opt_op, self.merged_summary, self.global_step], feed_dict=feed_dict)
 
     def eval_batch(self, sess, batch, eval_tensors=None):
@@ -77,6 +76,7 @@ class BaseModel(object):
                 pbar.update(num_batches_completed)
             pbar.finish()
             train_data_set.complete_epoch()
+            self.num_epochs_completed += 1
 
             if val_data_set and (epoch_idx + 1) % params.val_period == 0:
                 eval_tensors = eval_tensors if eval_tensors else []

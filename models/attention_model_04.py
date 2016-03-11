@@ -74,8 +74,7 @@ class LSTMSentenceEncoder(object):
         for layer_idx in range(params.emb_num_layers):
             with tf.variable_scope("emb_%d" % layer_idx):
                 cur_hidden_size = hidden_sizes[layer_idx]
-                next_emb_mat = tf.tanh(nn.linear([self.V, prev_size], cur_hidden_size, emb_mat))
-                emb_mat = next_emb_mat
+                emb_mat = tf.tanh(nn.linear([self.V, prev_size], cur_hidden_size, emb_mat))
                 prev_size = cur_hidden_size
         self.emb_mat = emb_mat
         self.single_cell = rnn_cell.BasicLSTMCell(self.d, forget_bias=0.0)
@@ -203,7 +202,7 @@ class AttentionModel(BaseModel):
             # self.logit = tf.squeeze(tf.batch_matmul(last_layer.u + last_layer.o, aug_g), [2])  # [N, C]
             image_logit = tf.squeeze(tf.batch_matmul(first_u, aug_g), [2])  # [N, C]
             memory_logit = tf.reduce_sum(first_u * o_sum, 2)# nn.prod_sum_sim([N, C, d], first_u, o_sum)
-            sent_logit =  tf.reduce_sum(first_u, 2)
+            sent_logit = tf.reduce_sum(first_u, 2)
             if params.mode == 'l':
                 self.logit = sent_logit
             elif params.mode == 'la':
