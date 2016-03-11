@@ -144,8 +144,6 @@ class Layer(object):
                 base = prev_layer.base
             sig, _ = nn.softmax_with_base([N, C, R], base, uf, f_mask_aug)  # [N, C]
 
-
-
         with tf.name_scope('o'):
             c_tiled = tf.tile(c_aug, [1, C, 1, 1])  # [N, C, R, d]
             o = tf.reduce_sum(c_tiled * tf.expand_dims(p, -1), 2)  # [N, C, d]

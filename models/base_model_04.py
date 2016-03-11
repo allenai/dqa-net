@@ -16,6 +16,7 @@ class BaseModel(object):
         self.save_dir = params.save_dir
         self.name = name or self.__class__.__name__
         self.initializer = tf.random_normal_initializer(params.init_mean, params.init_std)
+        self.num_epochs_completed = 0
         with graph.as_default(), tf.variable_scope(self.name, initializer=self.initializer):
             print("building %s tower ..." % self.name)
             self.global_step = tf.get_variable('global_step', shape=[],
@@ -39,6 +40,7 @@ class BaseModel(object):
     def train_batch(self, sess, learning_rate, batch):
         feed_dict = self._get_feed_dict(batch)
         feed_dict[self.learning_rate] = learning_rate
+        self.num_epochs_completed += 1
         return sess.run([self.opt_op, self.merged_summary, self.global_step], feed_dict=feed_dict)
 
     def eval_batch(self, sess, batch, eval_tensors=None):
@@ -119,7 +121,7 @@ class BaseModel(object):
         zipped_eval_values = [list(itertools.chain(*each)) for each in zip(*eval_values)]
         values = {name: values for name, values in zip(eval_names, zipped_eval_values)}
         out = {'ids': ids, 'values': values}
-        eval_path = os.path.join(params.eval_dir, "%s_%s.json" % (eval_data_set.name, str(int(global_step)).zfill(8)))
+        eval_path = os.path.join(params.eval_dir, "%s_%s.json" % (eval_data_set.name, str(self.num_epochs_completed).zfill(4)))
         json.dump(out, open(eval_path, 'w'))
 
         print("at %d: acc = %.2f%% = %d / %d, loss = %.4f" %

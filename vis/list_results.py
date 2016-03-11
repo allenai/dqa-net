@@ -19,7 +19,7 @@ def get_args():
     parser.add_argument("model_num", type=int)
     parser.add_argument("config_num", type=int)
     parser.add_argument("data_type", type=str)
-    parser.add_argument("global_step", type=int)
+    parser.add_argument("epoch", type=int)
     parser.add_argument("--start", default=0, type=int)
     parser.add_argument("--stop", default=1500, type=int)
     parser.add_argument("--show_im", default='True')
@@ -44,11 +44,11 @@ def list_results(args):
     model_num = args.model_num
     config_num = args.config_num
     data_type = args.data_type
-    global_step =args.global_step
+    epoch =args.epoch
     configs = importlib.import_module("configs.c%s" % str(model_num).zfill(2)).configs
     config = configs[config_num]
     evals_dir = os.path.join("evals", "m%s" % str(model_num).zfill(2), "c%s" % str(config_num).zfill(2))
-    evals_name = "%s_%s.json" % (data_type, str(global_step).zfill(8))
+    evals_name = "%s_%s.json" % (data_type, str(epoch).zfill(4))
     evals_path = os.path.join(evals_dir, evals_name)
     evals = json.load(open(evals_path, 'r'))
 
