@@ -129,13 +129,19 @@ class Layer(object):
             c_aug = tf.expand_dims(c, 1)  # [N, 1, R, d]
             u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
             u_tiled = tf.tile(u_aug, [1, 1, R, 1])  # [N, C, R, d]
-            uf = tf.reduce_sum(u_tiled * f_aug, 3, name='uf')  # [N, C, R]
+            # uf = tf.reduce_sum(u_tiled * f_aug, 3, name='uf')  # [N, C, R]
+            dot_sum_sim = nn.DotDiffSim([N, C, R, d])
+            uf = dot_sum_sim(u_tiled, f_aug)
             f_mask_aug = tf.expand_dims(memory.m_mask, 1)  # [N, 1, R]
+            f_mask_tiled = tf.tile(f_mask_aug, [1, C, 1])  # [N, C, R]
             if linear_start:
                 p = tf.reduce_sum(tf.mul(uf, f_mask_aug, name='p'), 3)  # [N, C, R]
             else:
-                p = nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p')  # [N, C, R]
-                p_debug = tf.reduce_sum(p, 2)  # must be 1!
+                uf_flat = tf.reshape(uf, [N, C*R])
+                f_mask_tiled_flat = tf.reshape(f_mask_tiled, [N, C*R])
+                p_flat = nn.softmax_with_mask([N, C, R], uf_flat, f_mask_tiled_flat, name='p_flat')  # [N, C, R]
+                p = tf.reshape(p_flat, [N, C, R])
+                # p_debug = tf.reduce_sum(p, 2)
 
             if prev_layer is None:
                 base = tf.get_variable('base', shape=[], dtype='float')
@@ -150,7 +156,6 @@ class Layer(object):
         self.f = f
         self.c = c
         self.p = p
-        self.p_debug = p_debug
         self.u = u
         self.o = o
         self.sig = sig
@@ -201,7 +206,9 @@ class AttentionModel(BaseModel):
         with tf.variable_scope('yp'):
             # self.logit = tf.squeeze(tf.batch_matmul(last_layer.u + last_layer.o, aug_g), [2])  # [N, C]
             image_logit = tf.squeeze(tf.batch_matmul(first_u, aug_g), [2])  # [N, C]
-            memory_logit = tf.reduce_sum(first_u * o_sum, 2)# nn.prod_sum_sim([N, C, d], first_u, o_sum)
+            # memory_logit = tf.reduce_sum(first_u * o_sum, 2)# nn.dot_diff_sim([N, C, d], first_u, o_sum)
+            dot_diff_sim = nn.DotDiffSim([N, C, d])
+            memory_logit = dot_diff_sim(first_u, o_sum)  # [N, C]
             sent_logit = tf.reduce_sum(first_u, 2)
             if params.mode == 'l':
                 self.logit = sent_logit

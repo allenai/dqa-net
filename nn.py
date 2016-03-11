@@ -38,25 +38,22 @@ def softmax_with_base(shape, base_untiled, x, mask=None, name='sig'):
 
 
 
+class DotDiffSim(object):
+    def __init__(self, shape, name='dot_sum'):
+        with tf.variable_scope(name):
+            self.shape = shape
+            d = shape[-1]
+            self.W_prod = tf.get_variable("W_prod", shape=[d, 1])
+            self.W_sum = tf.get_variable("W_sum", shape=[d, 1])
+            self.b = tf.get_variable("b", shape=[1])
 
-def prod_sum_sim(shape, u, v, name='prod_sum'):
-    """
-    product-sum similarlity between u and v
-    u and v must have [N, C, d] dimension.
-    :param shape: [N, C, d]
-    :param u:
-    :param v:
-    :return:
-    """
-    with tf.variable_scope(name):
-        N, C, d = shape
-        W_prod = tf.get_variable("W_prod", shape=[d, 1])
-        W_sum = tf.get_variable("W_sum", shape=[d, 1])
-        b = tf.get_variable("b", shape=[1])
-        u_flat = tf.reshape(u, [N*C, d])
-        v_flat = tf.reshape(v, [N*C, d])
-        logit_flat = tf.matmul(u_flat * v_flat, W_prod) + tf.matmul(u_flat + v_flat, W_sum) + b  # [N*C, 1]
-        logit = tf.reshape(logit_flat, [N, C])
+    def __call__(self, u, v):
+        N = reduce(mul, self.shape[:-1], 1)
+        d = self.shape[-1]
+        u_flat = tf.reshape(u, [N, d])
+        v_flat = tf.reshape(v, [N, d])
+        logit_flat = tf.matmul(u_flat * v_flat, self.W_prod) + tf.matmul(tf.abs(u_flat - v_flat), self.W_sum) + self.b  # [N*C, 1]
+        logit = tf.reshape(logit_flat, self.shape[:-1])
         return logit
 
 
