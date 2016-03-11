@@ -119,7 +119,7 @@ def list_results(args):
                 yp = [float("%.3f" % x) for x in eval_d['yp:0']]
                 sig = [float("%.3f" % x) for x in eval_d['sig:0']]
             else:
-                p, yp, sig = []
+                p, yp, sig = [], [], []
 
             evals = [eval_d[name] if eval_d else "" for name in eval_names]
             image_name = "%s.png" % image_id
@@ -136,7 +136,7 @@ def list_results(args):
                    'p': p,
                    'sig': sig,
                    'yp': yp,
-                   'ap': np.argmax(yp)
+                   'ap': np.argmax(yp) if len(yp) > 0 else 0
                    }
 
             rows.append(row)
