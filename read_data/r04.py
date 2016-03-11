@@ -94,7 +94,7 @@ def read_data(params, mode):
 
     data = [sentss, factss, images, answers]
     idxs = np.arange(len(answers))
-    include_leftover = not params.train
+    include_leftover = mode != 'train'
     data_set = DataSet(mode, batch_size, data, idxs, idx2id, include_leftover=include_leftover)
     print("done")
     return data_set

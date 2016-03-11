@@ -58,25 +58,7 @@ flags.DEFINE_boolean("draft", False, "Draft? (quick build) [False]")
 
 FLAGS = flags.FLAGS
 
-
-def main(_):
-    config_dict = configs[FLAGS.config] if FLAGS.config > 0 else {}
-    config = get_config(FLAGS.__flags, config_dict, 1)
-
-    meta_data_path = os.path.join(config.data_dir, "meta_data.json")
-    meta_data = json.load(open(meta_data_path, "r"))
-
-    # Other parameters
-    config.max_sent_size = meta_data['max_sent_size']
-    config.max_fact_size = meta_data['max_fact_size']
-    config.max_num_facts = meta_data['max_num_facts']
-    config.num_choices = meta_data['num_choices']
-    config.vocab_size = meta_data['vocab_size']
-    config.word_size = meta_data['word_size']
-    config.main_name = __name__
-    init_emb_mat_path = os.path.join(config.data_dir, 'init_emb_mat.h5')
-    config.init_emb_mat = h5py.File(init_emb_mat_path, 'r')['data'][:]
-
+def mkdirs(config):
     eval_dir = "evals/%s" % config.model_name
     eval_subdir = os.path.join(eval_dir, "c%s" % str(config.config).zfill(2))
     log_dir = "logs/%s" % config.model_name
@@ -97,19 +79,13 @@ def main(_):
         os.mkdir(eval_subdir)
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
-    if  os.path.exists(log_subdir):
+    if os.path.exists(log_subdir):
         if config.train and not config.load:
             shutil.rmtree(log_subdir)
             os.mkdir(log_subdir)
     else:
         os.mkdir(log_subdir)
-
     if config.train:
-        train_ds = read_data(config, 'train')
-        val_ds = read_data(config, 'val')
-        config.train_num_batches = train_ds.num_batches
-        config.val_num_batches = min(config.val_num_batches, train_ds.num_batches, val_ds.num_batches)
-
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
         if os.path.exists(save_subdir):
@@ -118,6 +94,39 @@ def main(_):
                 os.mkdir(save_subdir)
         else:
             os.mkdir(save_subdir)
+
+
+def load_meta_data(config):
+    meta_data_path = os.path.join(config.data_dir, "meta_data.json")
+    meta_data = json.load(open(meta_data_path, "r"))
+
+    # Other parameters
+    config.max_sent_size = meta_data['max_sent_size']
+    config.max_fact_size = meta_data['max_fact_size']
+    config.max_num_facts = meta_data['max_num_facts']
+    config.num_choices = meta_data['num_choices']
+    config.vocab_size = meta_data['vocab_size']
+    config.word_size = meta_data['word_size']
+
+
+def main(_):
+    config_dict = configs[FLAGS.config] if FLAGS.config > 0 else {}
+    config = get_config(FLAGS.__flags, config_dict, 1)
+    config.main_name = __name__
+
+    load_meta_data(config)
+    mkdirs(config)
+
+    # load other files
+    init_emb_mat_path = os.path.join(config.data_dir, 'init_emb_mat.h5')
+    config.init_emb_mat = h5py.File(init_emb_mat_path, 'r')['data'][:]
+
+    if config.train:
+        train_ds = read_data(config, 'train')
+        val_ds = read_data(config, 'val')
+        config.train_num_batches = train_ds.num_batches
+        config.val_num_batches = min(config.val_num_batches, train_ds.num_batches, val_ds.num_batches)
+
 
     else:
         test_ds = read_data(config, 'test')
