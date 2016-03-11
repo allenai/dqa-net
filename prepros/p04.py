@@ -232,7 +232,9 @@ def prepro_annos(args):
         # For debugging only
         if args.debug == 'True' and image_id in sentss_dict:
             correct_sents = [sents[answer] for sents, answer in zip(sentss_dict[image_id], answers_dict[image_id])]
-            indexed_facts.extend(correct_sents)
+            # indexed_facts.extend(correct_sents)
+            # FIXME : this is very strong prior!
+            indexed_facts = correct_sents
 
         facts_dict[image_id] = indexed_facts
         if len(indexed_facts) > 0:
