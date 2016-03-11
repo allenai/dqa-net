@@ -7,7 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/1.1.1/chroma.min.js"></script>
     <script>
         $(document).ready(function(){
-            $(".colorable").each(function() {
+            $(".att").each(function() {
                 var val = parseFloat($(this).text());
                 var scale = chroma.scale(['white', 'red']);
                 var color = scale(val).hex();
@@ -68,7 +68,7 @@
                         <tr>
                         <td><b>{{ loop.index0 }}</b></td>
                         {% for b in a %}
-                            <td class="colorable">{{ b }}</td>
+                            <td class="att">{{ b }}</td>
                         {% endfor %}
                         </tr>
                     {% endfor %}
@@ -81,7 +81,11 @@
                     {% endfor %}
                     </ol>
                 </td>
-                <td>
+                {% if row.correct %}
+                <td bgcolor="#7fff00">
+                {% else %}
+                <td bgcolor="#8b0000">
+                {% endif %}
                     <ol start="0">
                     {% for x in row.yp %}
                         <li>

@@ -126,6 +126,8 @@ def list_results(args):
             json_name = "%s.json" % image_name
             image_url = os.path.join('images', image_name)
             anno_url = os.path.join('annotations', json_name)
+            ap = np.argmax(yp) if len(yp) > 0 else 0
+            correct = len(yp) > 0 and ap == answer
             row = {'image_id': image_id,
                    'question_id': question_id,
                    'image_url': image_url,
@@ -136,7 +138,8 @@ def list_results(args):
                    'p': p,
                    'sig': sig,
                    'yp': yp,
-                   'ap': np.argmax(yp) if len(yp) > 0 else 0
+                   'ap': np.argmax(yp) if len(yp) > 0 else 0,
+                   'correct': correct,
                    }
 
             rows.append(row)
