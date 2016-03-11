@@ -129,10 +129,12 @@ class Layer(object):
             c_aug = tf.expand_dims(c, 1)  # [N, 1, R, d]
             u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
             u_tiled = tf.tile(u_aug, [1, 1, R, 1])  # [N, C, R, d]
-            f_aug_tiled = tf.tile(f_aug, [1, C, 1, 1])
-            uf = tf.reduce_sum(u_tiled * f_aug, 3, name='uf')  # [N, C, R]
-            # dot_sum_sim = nn.DotDiffSim([N, C, R, d])
-            # uf = dot_sum_sim(u_tiled, f_aug_tiled)
+            if params.dot_diff_sim:
+                f_aug_tiled = tf.tile(f_aug, [1, C, 1, 1])
+                dot_diff_sim = nn.DotDiffSim([N, C, R, d])
+                uf = dot_diff_sim(u_tiled, f_aug_tiled)
+            else:
+                uf = tf.reduce_sum(u_tiled * f_aug, 3, name='uf')  # [N, C, R]
             f_mask_aug = tf.expand_dims(memory.m_mask, 1)  # [N, 1, R]
             f_mask_tiled = tf.tile(f_mask_aug, [1, C, 1])  # [N, C, R]
             if linear_start:
