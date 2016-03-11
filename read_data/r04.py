@@ -18,7 +18,7 @@ class DataSet(object):
         self.idxs = idxs
         self.idx2id = idx2id
         self.num_examples = len(idxs)
-        self.num_batches = int(self.num_examples / self.batch_size) + int(self.include_leftover)
+        self.num_batches = int(self.num_examples / self.batch_size) + int(self.num_examples % self.batch_size > 0 and self.include_leftover)
         self.reset()
 
     def get_batch_idxs(self):
