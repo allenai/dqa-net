@@ -230,11 +230,14 @@ def prepro_annos(args):
         tokenized_facts = [_tokenize(fact) for fact in text_facts]
         indexed_facts = [_vlup(vocab, fact) for fact in tokenized_facts]
         # For debugging only
-        if args.debug == 'True' and image_id in sentss_dict:
-            correct_sents = [sents[answer] for sents, answer in zip(sentss_dict[image_id], answers_dict[image_id])]
-            # indexed_facts.extend(correct_sents)
-            # FIXME : this is very strong prior!
-            indexed_facts = correct_sents
+        if args.debug == 'True':
+            if image_id in sentss_dict:
+                correct_sents = [sents[answer] for sents, answer in zip(sentss_dict[image_id], answers_dict[image_id])]
+                # indexed_facts.extend(correct_sents)
+                # FIXME : this is very strong prior!
+                indexed_facts = correct_sents
+            else:
+                indexed_facts = []
 
         facts_dict[image_id] = indexed_facts
         if len(indexed_facts) > 0:
