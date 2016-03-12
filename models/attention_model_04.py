@@ -138,13 +138,13 @@ class Layer(object):
             else:
                 uf = tf.reduce_sum(u_tiled * f_aug, 3, name='uf')  # [N, C, R]
             f_mask_aug = tf.expand_dims(memory.m_mask, 1)  # [N, 1, R]
-            f_mask_tiled = tf.tile(f_mask_aug, [1, C, 1])  # [N, C, R]
+            # f_mask_tiled = tf.tile(f_mask_aug, [1, C, 1])  # [N, C, R]
             if linear_start:
                 p = tf.reduce_sum(tf.mul(uf, f_mask_aug, name='p'), 3)  # [N, C, R]
             else:
-                uf_flat = tf.reshape(uf, [N, C*R])
-                f_mask_tiled_flat = tf.reshape(f_mask_tiled, [N, C*R])
-                p_flat = nn.softmax_with_mask([N, C, R], uf_flat, f_mask_tiled_flat, name='p_flat')  # [N, C, R]
+                # uf_flat = tf.reshape(uf, [N, C*R])
+                # f_mask_tiled_flat = tf.reshape(f_mask_tiled, [N, C*R])
+                p_flat = nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p_flat')  # [N, C, R]
                 p = tf.reshape(p_flat, [N, C, R], name='p')
                 # p_debug = tf.reduce_sum(p, 2)
 
