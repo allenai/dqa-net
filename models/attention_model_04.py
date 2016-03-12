@@ -90,7 +90,9 @@ class LSTMSentenceEncoder(object):
         assert isinstance(sentence, Sentence)
         d, L, e = self.d, self.L, self.e
         J = sentence.shape[-1]
-        Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x, "Ax")  # [N, C, J, d]
+        Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, d]
+        Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
+
         F = reduce(mul, sentence.shape[:-1], 1)
         init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
         Ax_flat = tf.reshape(Ax, [F, J, d])

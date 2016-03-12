@@ -52,7 +52,7 @@ def _vget(vocab_dict, word):
 
 
 def _vlup(vocab_dict, words):
-    return [_vget(vocab_dict, word) for word in words]
+    return tuple(_vget(vocab_dict, word) for word in words)
 
 
 def _get_text(anno, key):
@@ -179,9 +179,8 @@ def anno2rels(anno):
         rels.append(rel)
 
     # Counting
-    rels.append(Relation('count', '', 'arrows', len(anno['arrows']) if 'arrows' in anno else 0, ''))
+    rels.append(Relation('count', '', 'stages', len(anno['arrows']) if 'arrows' in anno else 0, ''))
     rels.append(Relation('count', '', 'objects', len(anno['objects']) if 'objects' in anno else 0, ''))
-    rels.append(Relation('count', '', 'regions', len(anno['regions']) if 'regions' in anno else 0, ''))
 
     if 'relationships' not in anno:
         return rels
@@ -228,7 +227,7 @@ def prepro_annos(args):
         text_facts = [rel2text(anno, rel) for rel in rels]
         text_facts = [fact for fact in text_facts if fact is not None]
         tokenized_facts = [_tokenize(fact) for fact in text_facts]
-        indexed_facts = [_vlup(vocab, fact) for fact in tokenized_facts]
+        indexed_facts = list(set(_vlup(vocab, fact) for fact in tokenized_facts))
         # For debugging only
         if args.debug == 'True':
             if image_id in sentss_dict:
