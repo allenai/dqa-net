@@ -149,17 +149,16 @@ def main(_):
 
     graph = tf.Graph()
     model = AttentionModel(graph, config)
+    eval_tensors = [model.yp, model.last_layer.p, model.last_layer.sig]
     with tf.Session(graph=graph) as sess:
         sess.run(tf.initialize_all_variables())
         if config.train:
             writer = tf.train.SummaryWriter(config.log_dir, sess.graph_def)
             if config.load:
                 model.load(sess)
-            eval_tensors = [model.yp, model.last_layer.p, model.last_layer.sig]
             model.train(sess, writer, train_ds, val_ds, eval_tensors=eval_tensors)
         else:
             model.load(sess)
-            eval_tensors = [model.yp]
             model.eval(sess, test_ds, eval_tensors=eval_tensors)
 
 if __name__ == "__main__":
