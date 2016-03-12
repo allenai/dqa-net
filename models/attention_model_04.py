@@ -91,7 +91,13 @@ class LSTMSentenceEncoder(object):
                 prev_size = cur_hidden_size
         """
         self.emb_mat = emb_mat
-        self.single_cell = rnn_cell.BasicLSTMCell(self.d, input_size=self.e, forget_bias=2.5)
+        if params.lstm == 'basic':
+            self.single_cell = rnn_cell.BasicLSTMCell(self.d, input_size=self.e, forget_bias=params.forget_bias)
+        elif params.lstm == 'regular':
+            self.single_cell = rnn_cell.LSTMCell(self.d, self.e, cell_clip=params.cell_clip)
+        else:
+            raise Exception()
+
         self.single_cell = tf.nn.rnn_cell.DropoutWrapper(self.single_cell, output_keep_prob=params.keep_prob)
         self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
         self.scope = tf.get_variable_scope()
@@ -123,6 +129,7 @@ class LSTMSentenceEncoder(object):
         self.used = True
         return h_flat
 
+
 class Sim(object):
     def __init__(self, params, memory, encoder, u):
         N, C, R, d = params.batch_size, params.num_choices, params.max_num_facts, params.hidden_size
@@ -130,8 +137,24 @@ class Sim(object):
         f_aug = tf.expand_dims(f, 1)  # [N, 1, R, d]
         u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
         u_tiled = tf.tile(u_aug, [1, 1, R, 1])
-        uf = nn.man_sim([N, C, R, d], f_aug, u_tiled, name='uf')  # [N, C, R]
-        logit = tf.reduce_max(uf, 2)  # [N, C]
+        if params.sim_func == 'man_dist':
+            uf = nn.man_sim([N, C, R, d], f_aug, u_tiled, name='uf')  # [N, C, R]
+        elif params.sim_func == 'dot':
+            uf = tf.reduce_sum(u_tiled * f_aug, 3)
+        else:
+            raise Exception()
+        max_logit = tf.reduce_max(uf, 2)  # [N, C]
+        uf_flat = tf.reshape(uf, [N*C, R])
+        uf_sm_flat = tf.nn.softmax(uf_flat)
+        uf_sm = tf.reshape(uf_sm_flat, [N, C, R])
+        var_logit = tf.reduce_max(uf_sm, 2)
+        if params.max_func == 'max':
+            logit = max_logit
+        elif params.max_func == 'var':
+            logit = var_logit
+        elif params.max_func == 'combined':
+            logit = var_logit * max_logit
+
         f_mask_aug = tf.expand_dims(memory.m_mask, 1)
         p = nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p')
         # p = tf.reshape(p_flat, [N, C, R], name='p')

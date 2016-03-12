@@ -35,6 +35,11 @@ flags.DEFINE_integer("num_epochs", 50, "Total number of epochs for training [50]
 flags.DEFINE_boolean("linear_start", False, "Start training with linear model? [False]")
 flags.DEFINE_float("max_grad_norm", 40, "Max grad norm; above this number is clipped [40]")
 flags.DEFINE_float("keep_prob", 0.5, "Keep probability of dropout [0.5]")
+flags.DEFINE_string("sim_func", 'man_dist', "Similarity function: man_dist | dot [man_dist]")
+flags.DEFINE_string("max_func", 'max', "Max function: max | var | combined [max]")
+flags.DEFINE_string("lstm", "regular", "LSTM cell type: regular | basic [regular]")
+flags.DEFINE_float("forget_bias", 0.0, "LSTM forget bias for basic cell [0.0]")
+flags.DEFINE_float("cell_clip", 40, "LSTM cell clipping for regular cell [40]")
 
 # Training and testing options
 flags.DEFINE_boolean("train", False, "Train? Test if False [False]")
