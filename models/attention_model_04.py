@@ -198,7 +198,7 @@ class AttentionModel(BaseModel):
             self.y = tf.placeholder('int8', [N, C], name='y')
 
         with tf.variable_scope('first_u'):
-            sent_encoder = SentenceEncoder(params)
+            sent_encoder = LSTMSentenceEncoder(params)
             self.init_emb_mat = sent_encoder.init_emb_mat
             first_u = sent_encoder(self.s, name='first_u')
 
