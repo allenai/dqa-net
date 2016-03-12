@@ -41,21 +41,33 @@ class Memory(Sentence):
 
 
 class SentenceEncoder(object):
-    def __init__(self, V, J, d, sent_encoder=None):
+    def __init__(self, params):
+        self.V, self.d, self.L, self.e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
+        # self.init_emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
+        self.init_emb_mat = tf.placeholder('float', shape=[self.V, self.e], name='init_emb_mat')
+        emb_mat = self.init_emb_mat
+        prev_size = self.e
+        hidden_sizes = [self.d for _ in range(params.emb_num_layers)]
+        for layer_idx in range(params.emb_num_layers):
+            with tf.variable_scope("emb_%d" % layer_idx):
+                cur_hidden_size = hidden_sizes[layer_idx]
+                emb_mat = tf.tanh(nn.linear([self.V, prev_size], cur_hidden_size, emb_mat))
+                prev_size = cur_hidden_size
+        self.emb_mat = emb_mat
 
+    def __call__(self, sentence, name='u'):
+        assert isinstance(sentence, Sentence)
+        J = sentence.shape[-1]
         def f(JJ, jj, dd, kk):
             return (1-float(jj)/JJ) - (float(kk)/dd)*(1-2.0*jj/JJ)
 
         def g(jj):
-            return [f(J, jj, d, k) for k in range(d)]
+            return [f(J, jj, self.d, k) for k in range(self.d)]
 
         _l = [g(j) for j in range(J)]
-        self.A = tf.identity(sent_encoder.A, 'A') if sent_encoder else tf.get_variable('A', shape=[V, d])
-        self.l = tf.constant(_l, shape=[J, d], name='l')
-
-    def __call__(self, sentence, name='u'):
+        self.l = tf.constant(_l, shape=[J, self.d], name='l')
         assert isinstance(sentence, Sentence)
-        Ax = tf.nn.embedding_lookup(self.A, sentence.x)
+        Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x, name='Ax')
         lAx = self.l * Ax
         lAx_masked = lAx * tf.expand_dims(sentence.x_mask, -1)
         m = tf.reduce_sum(lAx_masked, len(sentence.shape) - 1, name=name)
@@ -91,7 +103,7 @@ class LSTMSentenceEncoder(object):
         d, L, e = self.d, self.L, self.e
         J = sentence.shape[-1]
         Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, d]
-        Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
+        # Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
 
         F = reduce(mul, sentence.shape[:-1], 1)
         init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
@@ -186,7 +198,7 @@ class AttentionModel(BaseModel):
             self.y = tf.placeholder('int8', [N, C], name='y')
 
         with tf.variable_scope('first_u'):
-            sent_encoder = LSTMSentenceEncoder(params)
+            sent_encoder = SentenceEncoder(params)
             self.init_emb_mat = sent_encoder.init_emb_mat
             first_u = sent_encoder(self.s, name='first_u')
 
