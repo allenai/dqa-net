@@ -94,6 +94,8 @@ class LSTMSentenceEncoder(object):
         self.single_cell = rnn_cell.BasicLSTMCell(self.d, input_size=self.e, forget_bias=2.5)
         self.single_cell = tf.nn.rnn_cell.DropoutWrapper(self.single_cell, output_keep_prob=params.keep_prob)
         self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
+        self.scope = tf.get_variable_scope()
+        self.used = False
 
     def __call__(self, sentence, init_hidden_state=None, name='s'):
         h_flat = self.get_last_hidden_state(sentence, init_hidden_state=init_hidden_state)
@@ -115,8 +117,10 @@ class LSTMSentenceEncoder(object):
 
         Ax_flat_split = [tf.squeeze(x_flat_each, [1])
                          for x_flat_each in tf.split(1, J, Ax_flat)]
-        o_flat, h_flat = rnn.rnn(self.cell, Ax_flat_split, init_hidden_state, sequence_length=x_len_flat)
+        with tf.variable_scope(self.scope, reuse=self.used):
+            o_flat, h_flat = rnn.rnn(self.cell, Ax_flat_split, init_hidden_state, sequence_length=x_len_flat)
         # tf.get_variable_scope().reuse_variables()
+        self.used = True
         return h_flat
 
 class Sim(object):
