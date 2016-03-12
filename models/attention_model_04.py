@@ -254,7 +254,7 @@ class AttentionModel(BaseModel):
             opt = tf.train.GradientDescentOptimizer(self.learning_rate)
             # FIXME : This must muse cross_entropy for some reason!
             grads_and_vars = opt.compute_gradients(self.cross_entropy)
-            grads_and_vars = [(tf.clip_by_norm(grad, params.max_grad_norm), var) if grad is not None and var is not None else (grad, var) for grad, var in grads_and_vars]
+            # grads_and_vars = [(tf.clip_by_norm(grad, params.max_grad_norm), var) if grad is not None and var is not None else (grad, var) for grad, var in grads_and_vars]
             self.opt_op = opt.apply_gradients(grads_and_vars, global_step=self.global_step)
 
         # summaries
