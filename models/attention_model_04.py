@@ -98,7 +98,7 @@ class LSTMSentenceEncoder(object):
         else:
             raise Exception()
 
-        self.single_cell = tf.nn.rnn_cell.DropoutWrapper(self.single_cell, output_keep_prob=params.keep_prob)
+        # self.single_cell = tf.nn.rnn_cell.DropoutWrapper(self.single_cell, output_keep_prob=params.keep_prob)
         self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
         self.scope = tf.get_variable_scope()
         self.used = False
