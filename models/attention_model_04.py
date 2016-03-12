@@ -92,14 +92,16 @@ class LSTMSentenceEncoder(object):
         """
         self.emb_mat = emb_mat
         if params.lstm == 'basic':
-            self.single_cell = rnn_cell.BasicLSTMCell(d, forget_bias=params.forget_bias)
+            self.first_cell = rnn_cell.BasicLSTMCell(d, input_size=e, forget_bias=params.forget_bias)
+            self.second_cell = rnn_cell.BasicLSTMCell(d, forget_bias=params.forget_bias)
         elif params.lstm == 'regular':
-            self.single_cell = rnn_cell.LSTMCell(d, d, cell_clip=params.cell_clip)
+            self.first_cell = rnn_cell.LSTMCell(d, e, cell_clip=params.cell_clip)
+            self.second_cell = rnn_cell.LSTMCell(d, d, cell_clip=params.cell_clip)
         else:
             raise Exception()
 
-        # self.single_cell = tf.nn.rnn_cell.DropoutWrapper(self.single_cell, output_keep_prob=params.keep_prob)
-        self.cell = rnn_cell.MultiRNNCell([self.single_cell] * L)
+        # self.first_cell = tf.nn.rnn_cell.DropoutWrapper(self.first_cell, output_keep_prob=params.keep_prob)
+        self.cell = rnn_cell.MultiRNNCell([self.first_cell] + [self.second_cell] * (L-1))
         self.scope = tf.get_variable_scope()
         self.used = False
 
@@ -118,17 +120,10 @@ class LSTMSentenceEncoder(object):
         J = sentence.shape[-1]
         Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
         # Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
-        hidden_sizes = [d for _ in range(params.emb_num_layers)]
-        prev_size = e
-        for layer_idx in range(params.emb_num_layers):
-            with tf.variable_scope("emb_%d" % layer_idx):
-                cur_hidden_size = hidden_sizes[layer_idx]
-                Ax = tf.tanh(nn.linear(sentence.shape + [prev_size], cur_hidden_size, Ax))
-                prev_size = cur_hidden_size
 
         F = reduce(mul, sentence.shape[:-1], 1)
         init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
-        Ax_flat = tf.reshape(Ax, [F, J, d])
+        Ax_flat = tf.reshape(Ax, [F, J, e])
         x_len_flat = tf.reshape(sentence.x_len, [F])
 
         Ax_flat_split = [tf.squeeze(x_flat_each, [1])

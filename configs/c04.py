@@ -3,8 +3,7 @@ configs = {}
 configs[8] = {'batch_size': 10,
               'hidden_size': 10,
               'num_layers': 1,
-              'rnn_num_layers': 1,
-              'emb_num_layers': 1,
+              'rnn_num_layers': 2,
               'init_mean': 0,
               'init_std': 0.1,
               'init_lr': 0.01,
@@ -43,7 +42,7 @@ configs[9] = {'batch_size': 100,
               'model_name': 'm04',
               'val_num_batches': 100}
 
-# real configs start here
+# deploy configs start here
 configs[0] = {'batch_size': 100,
               'hidden_size': 50,
               'num_layers': 1,
