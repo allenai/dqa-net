@@ -49,7 +49,7 @@ flags.DEFINE_boolean("progress", True, "Show progress? [True]")
 flags.DEFINE_boolean("gpu", False, 'Enable GPU? (Linux only) [False]')
 flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
-flags.DEFINE_integer("config", 0, "Config number to load. 0 to use currently defined config. [0]")
+flags.DEFINE_integer("config", -1, "Config number to load. -1 to use currently defined config. [-1]")
 flags.DEFINE_string("mode", "la", "l | la [la]")
 flags.DEFINE_boolean("dot_diff_sim", False, "use DotDiffSim? [False]")
 
@@ -116,7 +116,7 @@ def load_meta_data(config):
 
 
 def main(_):
-    config_dict = configs[FLAGS.config] if FLAGS.config > 0 else {}
+    config_dict = configs[FLAGS.config] if FLAGS.config >= 0 else {}
     config = get_config(FLAGS.__flags, config_dict, 1)
     config.main_name = __name__
 
