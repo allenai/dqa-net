@@ -57,6 +57,20 @@ class DotDiffSim(object):
         return logit
 
 
+def man_sim(shape, u, v, name='man_sim'):
+    """
+    Manhattan similarity
+    https://pdfs.semanticscholar.org/6812/fb9ef1c2dad497684a9020d8292041a639ff.pdf
+    :param shape:
+    :param u:
+    :param v:
+    :param name:
+    :return:
+    """
+    dist = tf.reduce_sum(tf.abs(u - v), len(shape)-1)
+    sim = tf.sub(0.0, dist, name=name)
+    return sim
+
 def linear(shape, output_dim, input_, name="linear"):
     a = shape[-1]
     b = output_dim

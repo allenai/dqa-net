@@ -149,7 +149,7 @@ def main(_):
 
     graph = tf.Graph()
     model = AttentionModel(graph, config)
-    eval_tensors = [model.yp, model.last_layer.p, model.last_layer.sig]
+    eval_tensors = [model.yp, model.sim.p]
     with tf.Session(graph=graph) as sess:
         sess.run(tf.initialize_all_variables())
         if config.train:

@@ -98,7 +98,7 @@ def list_results(args):
         eval_dd[tuple(id_)] = eval_d
 
     # headers = ['iid', 'qid', 'image', 'sents', 'answer', 'annotations', 'relations'] + eval_names
-    headers = ['iid', 'qid', 'image', 'sents', 'annotations', 'relations', 'p', 'sig', 'yp']
+    headers = ['iid', 'qid', 'image', 'sents', 'annotations', 'relations', 'p', 'yp']
     rows = []
     pbar = get_pbar(len(sentss_dict)).start()
     for i, image_id in enumerate(image_ids):
@@ -117,7 +117,6 @@ def list_results(args):
                 p = p_all[:len(decoded_facts)]
                 p = [[float("%.3f" % x) for x in y] for y in p]
                 yp = [float("%.3f" % x) for x in eval_d['yp:0']]
-                sig = [float("%.3f" % x) for x in eval_d['sig:0']]
             else:
                 p, yp, sig = [], [], []
 
@@ -136,7 +135,6 @@ def list_results(args):
                    'answer': answer,
                    'facts': decoded_facts,
                    'p': p,
-                   'sig': sig,
                    'yp': yp,
                    'ap': np.argmax(yp) if len(yp) > 0 else 0,
                    'correct': correct,

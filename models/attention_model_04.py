@@ -81,6 +81,7 @@ class LSTMSentenceEncoder(object):
         # self.init_emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
         self.init_emb_mat = tf.placeholder('float', shape=[self.V, self.e], name='init_emb_mat')
         emb_mat = self.init_emb_mat
+        """
         prev_size = self.e
         hidden_sizes = [self.d for _ in range(params.emb_num_layers)]
         for layer_idx in range(params.emb_num_layers):
@@ -88,8 +89,9 @@ class LSTMSentenceEncoder(object):
                 cur_hidden_size = hidden_sizes[layer_idx]
                 emb_mat = tf.tanh(nn.linear([self.V, prev_size], cur_hidden_size, emb_mat))
                 prev_size = cur_hidden_size
+        """
         self.emb_mat = emb_mat
-        self.single_cell = rnn_cell.BasicLSTMCell(self.d, forget_bias=0.0)
+        self.single_cell = rnn_cell.BasicLSTMCell(self.d, input_size=self.e, forget_bias=2.5)
         self.single_cell = tf.nn.rnn_cell.DropoutWrapper(self.single_cell, output_keep_prob=params.keep_prob)
         self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
 
@@ -103,12 +105,12 @@ class LSTMSentenceEncoder(object):
         assert isinstance(sentence, Sentence)
         d, L, e = self.d, self.L, self.e
         J = sentence.shape[-1]
-        Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, d]
+        Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
         # Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
 
         F = reduce(mul, sentence.shape[:-1], 1)
         init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
-        Ax_flat = tf.reshape(Ax, [F, J, d])
+        Ax_flat = tf.reshape(Ax, [F, J, e])
         x_len_flat = tf.reshape(sentence.x_len, [F])
 
         Ax_flat_split = [tf.squeeze(x_flat_each, [1])
@@ -116,6 +118,22 @@ class LSTMSentenceEncoder(object):
         o_flat, h_flat = rnn.rnn(self.cell, Ax_flat_split, init_hidden_state, sequence_length=x_len_flat)
         # tf.get_variable_scope().reuse_variables()
         return h_flat
+
+class Sim(object):
+    def __init__(self, params, memory, encoder, u):
+        N, C, R, d = params.batch_size, params.num_choices, params.max_num_facts, params.hidden_size
+        f = encoder(memory, name='f')
+        f_aug = tf.expand_dims(f, 1)  # [N, 1, R, d]
+        u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
+        u_tiled = tf.tile(u_aug, [1, 1, R, 1])
+        uf = nn.man_sim([N, C, R, d], f_aug, u_tiled, name='uf')  # [N, C, R]
+        logit = tf.reduce_max(uf, 2)  # [N, C]
+        f_mask_aug = tf.expand_dims(memory.m_mask, 1)
+        p = nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p')
+        # p = tf.reshape(p_flat, [N, C, R], name='p')
+
+        self.logit = logit
+        self.p = p
 
 
 class Layer(object):
@@ -203,6 +221,7 @@ class AttentionModel(BaseModel):
             self.init_emb_mat = sent_encoder.init_emb_mat
             first_u = sent_encoder(self.s, name='first_u')
 
+        """
         layers = []
         prev_layer = None
         for layer_index in range(params.num_layers):
@@ -220,22 +239,17 @@ class AttentionModel(BaseModel):
             image = self.image  # [N, G]
             g = tf.tanh(nn.linear([N, G], d, image))  # [N, d]
             aug_g = tf.expand_dims(g, 2, name='aug_g')  # [N, d, 1]
+        """
+
+        with tf.variable_scope("sim"):
+            sim = Sim(params, self.f, sent_encoder, first_u)
 
         with tf.variable_scope('yp'):
-            # self.logit = tf.squeeze(tf.batch_matmul(last_layer.u + last_layer.o, aug_g), [2])  # [N, C]
-            image_logit = tf.squeeze(tf.batch_matmul(first_u, aug_g), [2])  # [N, C]
-            if params.dot_diff_sim:
-                dot_diff_sim = nn.DotDiffSim([N, C, d])
-                memory_logit = dot_diff_sim(first_u, o_sum)  # [N, C]
-            else:
-                memory_logit = tf.reduce_sum(first_u * o_sum, 2)# nn.dot_diff_sim([N, C, d], first_u, o_sum)
-            sent_logit = tf.reduce_sum(first_u, 2)
             if params.mode == 'l':
-                self.logit = sent_logit
+                self.logit = tf.reduce_sum(first_u, 2)
             elif params.mode == 'la':
-                sig = last_layer.sig
                 # self.logit = sig * memory_logit + (1 - sig) * sent_logit
-                self.logit = memory_logit
+                self.logit = sim.logit
             self.yp = tf.nn.softmax(self.logit, name='yp')  # [N, C]
 
         with tf.name_scope('loss') as loss_scope:
@@ -259,15 +273,17 @@ class AttentionModel(BaseModel):
 
         # summaries
         summaries.append(tf.histogram_summary(first_u.op.name, first_u))
+        """
         summaries.append(tf.histogram_summary(last_layer.f.op.name, last_layer.f))
         summaries.append(tf.histogram_summary(last_layer.u.op.name, last_layer.u))
         summaries.append(tf.histogram_summary(last_layer.o.op.name, last_layer.o))
         summaries.append(tf.histogram_summary(last_layer.p.op.name, last_layer.p))
         summaries.append(tf.histogram_summary(last_layer.sig.op.name, last_layer.sig))
+        """
         summaries.append(tf.scalar_summary("%s (raw)" % self.total_loss.op.name, self.total_loss))
-        summaries.append(tf.scalar_summary("%s" % last_layer.base.op.name, last_layer.base))
         self.merged_summary = tf.merge_summary(summaries)
-        self.last_layer = last_layer
+        # self.last_layer = last_layer
+        self.sim = sim
 
     def _get_feed_dict(self, batch):
         sents_batch, facts_batch, images_batch = batch[:-1]
