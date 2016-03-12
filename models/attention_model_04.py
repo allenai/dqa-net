@@ -77,9 +77,9 @@ class SentenceEncoder(object):
 class LSTMSentenceEncoder(object):
     def __init__(self, params):
         self.params = params
-        self.V, self.d, self.L, self.e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
+        V, d, L, e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
         # self.init_emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
-        self.init_emb_mat = tf.placeholder('float', shape=[self.V, self.e], name='init_emb_mat')
+        self.init_emb_mat = tf.placeholder('float', shape=[V, e], name='init_emb_mat')
         emb_mat = self.init_emb_mat
         """
         prev_size = self.e
@@ -92,33 +92,43 @@ class LSTMSentenceEncoder(object):
         """
         self.emb_mat = emb_mat
         if params.lstm == 'basic':
-            self.single_cell = rnn_cell.BasicLSTMCell(self.d, input_size=self.e, forget_bias=params.forget_bias)
+            self.single_cell = rnn_cell.BasicLSTMCell(d, forget_bias=params.forget_bias)
         elif params.lstm == 'regular':
-            self.single_cell = rnn_cell.LSTMCell(self.d, self.e, cell_clip=params.cell_clip)
+            self.single_cell = rnn_cell.LSTMCell(d, d, cell_clip=params.cell_clip)
         else:
             raise Exception()
 
         # self.single_cell = tf.nn.rnn_cell.DropoutWrapper(self.single_cell, output_keep_prob=params.keep_prob)
-        self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
+        self.cell = rnn_cell.MultiRNNCell([self.single_cell] * L)
         self.scope = tf.get_variable_scope()
         self.used = False
 
     def __call__(self, sentence, init_hidden_state=None, name='s'):
+        params = self.params
+        L, d = params.rnn_num_layers, params.hidden_size
         h_flat = self.get_last_hidden_state(sentence, init_hidden_state=init_hidden_state)
-        h_last = tf.reshape(h_flat, sentence.shape[:-1] + [2*self.L*self.d])
-        s = tf.identity(tf.split(2, 2*self.L, h_last)[2*self.L-1], name=name)
+        h_last = tf.reshape(h_flat, sentence.shape[:-1] + [2*L*d])
+        s = tf.identity(tf.split(2, 2*L, h_last)[2*L-1], name=name)
         return s
 
     def get_last_hidden_state(self, sentence, init_hidden_state=None):
         assert isinstance(sentence, Sentence)
-        d, L, e = self.d, self.L, self.e
+        params = self.params
+        d, L, e = params.hidden_size, params.rnn_num_layers, params.word_size
         J = sentence.shape[-1]
         Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
         # Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
+        hidden_sizes = [d for _ in range(params.emb_num_layers)]
+        prev_size = e
+        for layer_idx in range(params.emb_num_layers):
+            with tf.variable_scope("emb_%d" % layer_idx):
+                cur_hidden_size = hidden_sizes[layer_idx]
+                Ax = tf.tanh(nn.linear(sentence.shape + [prev_size], cur_hidden_size, Ax))
+                prev_size = cur_hidden_size
 
         F = reduce(mul, sentence.shape[:-1], 1)
         init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
-        Ax_flat = tf.reshape(Ax, [F, J, e])
+        Ax_flat = tf.reshape(Ax, [F, J, d])
         x_len_flat = tf.reshape(sentence.x_len, [F])
 
         Ax_flat_split = [tf.squeeze(x_flat_each, [1])
