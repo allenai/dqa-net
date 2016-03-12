@@ -90,6 +90,7 @@ class LSTMSentenceEncoder(object):
                 prev_size = cur_hidden_size
         self.emb_mat = emb_mat
         self.single_cell = rnn_cell.BasicLSTMCell(self.d, forget_bias=0.0)
+        self.single_cell = tf.nn.rnn_cell.DropoutWrapper(self.single_cell, output_keep_prob=params.keep_prob)
         self.cell = rnn_cell.MultiRNNCell([self.single_cell] * self.L)
 
     def __call__(self, sentence, init_hidden_state=None, name='s'):
