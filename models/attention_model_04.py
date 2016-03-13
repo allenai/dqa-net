@@ -276,12 +276,23 @@ class AttentionModel(BaseModel):
         with tf.variable_scope("sim"):
             sim = Sim(params, self.f, sent_encoder, first_u)
 
-        with tf.variable_scope('yp'):
+        with tf.variable_scope("merge"):
+            W = tf.get_variable("multiplier", shape=[])
+            b = tf.get_variable("bias", shape=[])
+            gate = tf.nn.sigmoid(W*tf.reduce_max(sim.logit, 1) + b)
+            gate_aug = tf.expand_dims(gate, -1)  # [N, 1]
+            sent_logit_aug = nn.linear([N, C, d], 1, first_u, 'sent_logit')
+            sent_logit = tf.squeeze(sent_logit_aug, [2])
+            mem_logit = sim.logit
             if params.mode == 'l':
-                self.logit = tf.reduce_sum(first_u, 2)
+                self.logit = sent_logit
+            elif params.mode == 'a':
+                self.logit = mem_logit
             elif params.mode == 'la':
+                self.logit = gate_aug * mem_logit + (1 - gate_aug) * sent_logit
                 # self.logit = sig * memory_logit + (1 - sig) * sent_logit
-                self.logit = sim.logit
+
+        with tf.variable_scope('yp'):
             self.yp = tf.nn.softmax(self.logit, name='yp')  # [N, C]
 
         with tf.name_scope('loss') as loss_scope:
@@ -312,6 +323,8 @@ class AttentionModel(BaseModel):
         summaries.append(tf.histogram_summary(last_layer.p.op.name, last_layer.p))
         summaries.append(tf.histogram_summary(last_layer.sig.op.name, last_layer.sig))
         """
+        summaries.append(tf.scalar_summary(W.op.name, W))
+        summaries.append(tf.scalar_summary(b.op.name, b))
         summaries.append(tf.scalar_summary("%s (raw)" % self.total_loss.op.name, self.total_loss))
         self.merged_summary = tf.merge_summary(summaries)
         # self.last_layer = last_layer

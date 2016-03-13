@@ -149,11 +149,34 @@ def rel2text(anno, rel):
             else:
                 return template % val
 
+    elif tup == ('unary', '', 'regionLabel'):
+        template = TEMPLATES[1]
+        val =_get_text(anno, o_keys[0])
+        if val is not None:
+            words = _tokenize(val)
+            if len(words) > MAX_LABEL_SIZE:
+                return val
+            else:
+                return template % val
+
     elif tup == ('unary', '', 'imageCaption'):
         val = _get_text(anno, o_keys[0])
         return val
 
+    elif tup == ('unary', '', ''):
+        val = _get_text(anno, o_keys[0])
+        return val
+
+    elif tup == ('unary', '', 'arrowDescriptor'):
+        val = _get_text(anno, o_keys[0])
+        return val
+
     elif tup == ('unary', '', 'imageTitle'):
+        template = TEMPLATES[2]
+        val = _get_text(anno, o_keys[0])
+        return template % val
+
+    elif tup == ('unary', '', 'sectionTitle'):
         template = TEMPLATES[2]
         val = _get_text(anno, o_keys[0])
         return template % val
@@ -168,6 +191,7 @@ def rel2text(anno, rel):
 
 
 Relation = namedtuple('Relation', 'type subtype category origin destination')
+categories = set()
 
 def anno2rels(anno):
     types = set()
@@ -175,6 +199,7 @@ def anno2rels(anno):
     # Unary relations
     for text_id, d in anno['text'].items():
         category = d['category'] if 'category' in d else ''
+        categories.add(category)
         rel = Relation('unary', '', category, [text_id], '')
         rels.append(rel)
 
@@ -462,4 +487,5 @@ if __name__ == "__main__":
     build_vocab(ARGS)
     prepro_questions(ARGS)
     prepro_annos(ARGS)
+    print(categories)
     # prepro_images(ARGS)
