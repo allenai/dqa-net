@@ -41,6 +41,7 @@ flags.DEFINE_string("lstm", "regular", "LSTM cell type: regular | basic | GRU [r
 flags.DEFINE_float("forget_bias", 2.5, "LSTM forget bias for basic cell [0.0]")
 flags.DEFINE_float("cell_clip", 40, "LSTM cell clipping for regular cell [40]")
 flags.DEFINE_string("opt", 'basic', 'Optimizer: basic | adagrad [basic]')
+flags.DEFINE_float("rand_y", 1.0, "Rand y. [1.0]")
 
 # Training and testing options
 flags.DEFINE_boolean("train", False, "Train? Test if False [False]")
