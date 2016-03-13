@@ -395,5 +395,10 @@ class AttentionModel(BaseModel):
         N, C = p.batch_size, p.num_choices
         y = np.zeros([N, C], dtype='int8')
         for i, label in enumerate(label_batch):
-            y[i, label] = 1
+            y[i, label] = np.random.rand() * self.params.rand_y
+            rand_other = (1.0 - self.params.rand_y)/(C-1)
+            for cur in range(C):
+                if cur != label:
+                    y[i, cur] = np.random.rand() * rand_other
+            y[i, :] /= sum(y[i, :])
         return y
