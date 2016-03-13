@@ -91,11 +91,15 @@ class LSTMSentenceEncoder(object):
                 prev_size = cur_hidden_size
         """
         self.emb_mat = emb_mat
+
+        self.emb_hidden_sizes = [d for _ in range(params.emb_num_layers)]
+        self.input_size = self.emb_hidden_sizes[-1] if self.emb_hidden_sizes else e
+
         if params.lstm == 'basic':
-            self.first_cell = rnn_cell.BasicLSTMCell(d, input_size=e, forget_bias=params.forget_bias)
+            self.first_cell = rnn_cell.BasicLSTMCell(d, input_size=self.input_size, forget_bias=params.forget_bias)
             self.second_cell = rnn_cell.BasicLSTMCell(d, forget_bias=params.forget_bias)
         elif params.lstm == 'regular':
-            self.first_cell = rnn_cell.LSTMCell(d, e, cell_clip=params.cell_clip)
+            self.first_cell = rnn_cell.LSTMCell(d, self.input_size, cell_clip=params.cell_clip)
             self.second_cell = rnn_cell.LSTMCell(d, d, cell_clip=params.cell_clip)
         else:
             raise Exception()
@@ -116,24 +120,30 @@ class LSTMSentenceEncoder(object):
 
     def get_last_hidden_state(self, sentence, init_hidden_state=None):
         assert isinstance(sentence, Sentence)
-        params = self.params
-        d, L, e = params.hidden_size, params.rnn_num_layers, params.word_size
-        J = sentence.shape[-1]
-        Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
-        # Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
-
-        F = reduce(mul, sentence.shape[:-1], 1)
-        init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
-        Ax_flat = tf.reshape(Ax, [F, J, e])
-        x_len_flat = tf.reshape(sentence.x_len, [F])
-
-        Ax_flat_split = [tf.squeeze(x_flat_each, [1])
-                         for x_flat_each in tf.split(1, J, Ax_flat)]
         with tf.variable_scope(self.scope, reuse=self.used):
+            params = self.params
+            d, L, e = params.hidden_size, params.rnn_num_layers, params.word_size
+            J = sentence.shape[-1]
+            Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
+            # Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
+
+            prev_size = e
+            for layer_idx in range(params.emb_num_layers):
+                with tf.variable_scope("Ax_%d" % layer_idx):
+                    cur_size = self.emb_hidden_sizes[layer_idx]
+                    Ax = tf.tanh(nn.linear(sentence.shape + [prev_size], cur_size, Ax), name="Ax_%d" % layer_idx)
+                    prev_size = cur_size
+
+            F = reduce(mul, sentence.shape[:-1], 1)
+            init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
+            Ax_flat = tf.reshape(Ax, [F, J, self.input_size])
+            x_len_flat = tf.reshape(sentence.x_len, [F])
+
+            Ax_flat_split = [tf.squeeze(x_flat_each, [1]) for x_flat_each in tf.split(1, J, Ax_flat)]
             o_flat, h_flat = rnn.rnn(self.cell, Ax_flat_split, init_hidden_state, sequence_length=x_len_flat)
-        # tf.get_variable_scope().reuse_variables()
-        self.used = True
-        return h_flat
+            # tf.get_variable_scope().reuse_variables()
+            self.used = True
+            return h_flat
 
 
 class Sim(object):
