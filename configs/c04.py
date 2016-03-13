@@ -141,7 +141,7 @@ configs[3] = {'batch_size': 100,
               'opt': 'adagrad',
               }
 
-configs[4] = {'batch_size': 100,
+configs[4] = {'batch_size': 50,
               'hidden_size': 100,
               'num_layers': 1,
               'rnn_num_layers': 3,
@@ -165,7 +165,7 @@ configs[4] = {'batch_size': 100,
               'rand_y': 1.0,
               }
 
-configs[5] = {'batch_size': 100,
+configs[5] = {'batch_size': 50,
               'hidden_size': 100,
               'num_layers': 1,
               'rnn_num_layers': 3,
@@ -189,7 +189,7 @@ configs[5] = {'batch_size': 100,
               'rand_y': 0.5,
               }
 
-configs[6] = {'batch_size': 100,
+configs[6] = {'batch_size': 50,
               'hidden_size': 100,
               'num_layers': 1,
               'rnn_num_layers': 3,
@@ -214,7 +214,7 @@ configs[6] = {'batch_size': 100,
               'opt': 'adagrad',
               }
 
-configs[7] = {'batch_size': 100,
+configs[7] = {'batch_size': 50,
               'hidden_size': 100,
               'num_layers': 1,
               'rnn_num_layers': 3,
