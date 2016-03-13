@@ -101,6 +101,9 @@ class LSTMSentenceEncoder(object):
         elif params.lstm == 'regular':
             self.first_cell = rnn_cell.LSTMCell(d, self.input_size, cell_clip=params.cell_clip)
             self.second_cell = rnn_cell.LSTMCell(d, d, cell_clip=params.cell_clip)
+        elif params.lstm == 'gru':
+            self.first_cell = rnn_cell.GRUCell(d, input_size=self.input_size)
+            self.second_cell = rnn_cell.GRUCell(d)
         else:
             raise Exception()
 
@@ -114,8 +117,14 @@ class LSTMSentenceEncoder(object):
         params = self.params
         L, d = params.rnn_num_layers, params.hidden_size
         h_flat = self.get_last_hidden_state(sentence, init_hidden_state=init_hidden_state)
-        h_last = tf.reshape(h_flat, sentence.shape[:-1] + [2*L*d])
-        s = tf.identity(tf.split(2, 2*L, h_last)[2*L-1], name=name)
+        if params.lstm in ['basic', 'regular']:
+            h_last = tf.reshape(h_flat, sentence.shape[:-1] + [2*L*d])
+            s = tf.identity(tf.split(2, 2*L, h_last)[2*L-1], name=name)
+        elif params.lstm == 'gru':
+            h_last = tf.reshape(h_flat, sentence.shape[:-1] + [L*d])
+            s = tf.identity(tf.split(2, L, h_last)[L-1], name=name)
+        else:
+            raise Exception()
         return s
 
     def get_last_hidden_state(self, sentence, init_hidden_state=None):
@@ -184,7 +193,6 @@ class Layer(object):
         assert isinstance(memory, Memory)
         self.params = params
         N, C, R, d = params.batch_size, params.num_choices, params.max_num_facts, params.hidden_size
-        linear_start = params.linear_start
 
         with tf.variable_scope("input"):
             if sent_encoder:
@@ -205,28 +213,14 @@ class Layer(object):
             c_aug = tf.expand_dims(c, 1)  # [N, 1, R, d]
             u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
             u_tiled = tf.tile(u_aug, [1, 1, R, 1])  # [N, C, R, d]
-            if params.dot_diff_sim:
-                f_aug_tiled = tf.tile(f_aug, [1, C, 1, 1])
-                dot_diff_sim = nn.DotDiffSim([N, C, R, d])
-                uf = dot_diff_sim(u_tiled, f_aug_tiled)
-            else:
-                uf = tf.reduce_sum(u_tiled * f_aug, 3, name='uf')  # [N, C, R]
+            uf = tf.reduce_sum(u_tiled * f_aug, 3, name='uf')  # [N, C, R]
             f_mask_aug = tf.expand_dims(memory.m_mask, 1)  # [N, 1, R]
             # f_mask_tiled = tf.tile(f_mask_aug, [1, C, 1])  # [N, C, R]
-            if linear_start:
-                p = tf.reduce_sum(tf.mul(uf, f_mask_aug, name='p'), 3)  # [N, C, R]
-            else:
-                # uf_flat = tf.reshape(uf, [N, C*R])
-                # f_mask_tiled_flat = tf.reshape(f_mask_tiled, [N, C*R])
-                p_flat = nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p_flat')  # [N, C, R]
-                p = tf.reshape(p_flat, [N, C, R], name='p')
-                # p_debug = tf.reduce_sum(p, 2)
-
-            if prev_layer is None:
-                base = tf.get_variable('base', shape=[], dtype='float')
-            else:
-                base = prev_layer.base
-            sig, _ = nn.softmax_with_base([N, C, R], base, uf, f_mask_aug)  # [N, C]
+            # uf_flat = tf.reshape(uf, [N, C*R])
+            # f_mask_tiled_flat = tf.reshape(f_mask_tiled, [N, C*R])
+            p_flat = nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p_flat')  # [N, C, R]
+            p = tf.reshape(p_flat, [N, C, R], name='p')
+            # p_debug = tf.reduce_sum(p, 2)
 
         with tf.name_scope('o'):
             c_tiled = tf.tile(c_aug, [1, C, 1, 1])  # [N, C, R, d]
@@ -234,11 +228,9 @@ class Layer(object):
 
         self.f = f
         self.c = c
-        self.p = p
+        self.p = p  # [N, C, R]
         self.u = u
         self.o = o
-        self.sig = sig
-        self.base = base
         self.input_encoder = input_encoder
         self.output_encoder = output_encoder
 
@@ -264,7 +256,6 @@ class AttentionModel(BaseModel):
             self.init_emb_mat = sent_encoder.init_emb_mat
             first_u = sent_encoder(self.s, name='first_u')
 
-        """
         layers = []
         prev_layer = None
         for layer_index in range(params.num_layers):
@@ -276,25 +267,27 @@ class AttentionModel(BaseModel):
                 layers.append(cur_layer)
                 prev_layer = cur_layer
         last_layer = layers[-1]
-        o_sum = sum(layer.o for layer in layers)
 
-        with tf.variable_scope('f'):
-            image = self.image  # [N, G]
-            g = tf.tanh(nn.linear([N, G], d, image))  # [N, d]
-            aug_g = tf.expand_dims(g, 2, name='aug_g')  # [N, d, 1]
-        """
+        sim = Sim(params, self.f, sent_encoder, first_u)
 
-        with tf.variable_scope("sim"):
-            sim = Sim(params, self.f, sent_encoder, first_u)
+        if params.model == 'sim':
+            with tf.variable_scope("sim"):
+                logit = sim.logit
+        elif params.model == 'att':
+            with tf.variable_scope("att"):
+                logit = tf.reduce_sum(first_u * last_layer.o, 2)
+        else:
+            raise Exception()
+
 
         with tf.variable_scope("merge"):
             W = tf.get_variable("multiplier", shape=[])
             b = tf.get_variable("bias", shape=[])
-            gate = tf.nn.sigmoid(W*tf.reduce_max(sim.logit, 1) + b)
+            gate = tf.nn.sigmoid(W*tf.reduce_max(logit, 1) + b)
             gate_aug = tf.expand_dims(gate, -1)  # [N, 1]
             sent_logit_aug = nn.linear([N, C, d], 1, first_u, 'sent_logit')
             sent_logit = tf.squeeze(sent_logit_aug, [2])
-            mem_logit = sim.logit
+            mem_logit = logit
             if params.mode == 'l':
                 self.logit = sent_logit
             elif params.mode == 'a':
@@ -319,7 +312,12 @@ class AttentionModel(BaseModel):
             self.acc = tf.reduce_mean(tf.cast(self.correct_vec, 'float'), name='acc')
 
         with tf.name_scope('opt'):
-            opt = tf.train.GradientDescentOptimizer(self.learning_rate)
+            if params.opt == 'basic':
+                opt = tf.train.GradientDescentOptimizer(self.learning_rate)
+            elif params.opt == 'adagrad':
+                opt = tf.train.AdagradOptimizer(self.learning_rate)
+            else:
+                raise Exception()
             # FIXME : This must muse cross_entropy for some reason!
             grads_and_vars = opt.compute_gradients(self.cross_entropy)
             # grads_and_vars = [(tf.clip_by_norm(grad, params.max_grad_norm), var) if grad is not None and var is not None else (grad, var) for grad, var in grads_and_vars]
@@ -327,18 +325,15 @@ class AttentionModel(BaseModel):
 
         # summaries
         summaries.append(tf.histogram_summary(first_u.op.name, first_u))
-        """
         summaries.append(tf.histogram_summary(last_layer.f.op.name, last_layer.f))
         summaries.append(tf.histogram_summary(last_layer.u.op.name, last_layer.u))
         summaries.append(tf.histogram_summary(last_layer.o.op.name, last_layer.o))
         summaries.append(tf.histogram_summary(last_layer.p.op.name, last_layer.p))
-        summaries.append(tf.histogram_summary(last_layer.sig.op.name, last_layer.sig))
-        """
         summaries.append(tf.scalar_summary(W.op.name, W))
         summaries.append(tf.scalar_summary(b.op.name, b))
         summaries.append(tf.scalar_summary("%s (raw)" % self.total_loss.op.name, self.total_loss))
         self.merged_summary = tf.merge_summary(summaries)
-        # self.last_layer = last_layer
+        self.last_layer = last_layer
         self.sim = sim
 
     def _get_feed_dict(self, batch):
