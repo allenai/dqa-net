@@ -100,7 +100,7 @@ class LSTMSentenceEncoder(object):
         else:
             raise Exception()
 
-        if params.keep_prob < 1.0:
+        if params.train and params.keep_prob < 1.0:
             self.first_cell = tf.nn.rnn_cell.DropoutWrapper(self.first_cell, input_keep_prob=params.keep_prob, output_keep_prob=params.keep_prob)
         self.cell = rnn_cell.MultiRNNCell([self.first_cell] + [self.second_cell] * (L-1))
         self.scope = tf.get_variable_scope()
