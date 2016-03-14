@@ -76,10 +76,11 @@ def _get_text(anno, key):
             dest = d['destination'][0]
             origin = d['origin'][0]
             if dest == key:
+                print(dest, origin, key)
                 return _get_text(anno, origin)
             elif origin == key:
+                print(dest, origin, key)
                 return _get_text(anno, dest)
-        raise Exception(key)
     else:
         raise Exception(key)
     return None
