@@ -73,8 +73,8 @@ def _get_text(anno, key):
             category = d['category']
             if category in ['arrowHeadTail', 'arrowDescriptor']:
                 return None
-            dest = d['destination']
-            origin = d['origin']
+            dest = d['destination'][0]
+            origin = d['origin'][0]
             if dest == key:
                 return _get_text(anno, origin)
             elif origin == key:
