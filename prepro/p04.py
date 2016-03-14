@@ -79,6 +79,8 @@ def _get_text(anno, key):
                 return _get_text(anno, origin)
             elif origin == key:
                 return _get_text(anno, dest)
+    else:
+        raise Exception(key)
     return None
 
 
