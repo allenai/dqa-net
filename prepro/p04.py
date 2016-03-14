@@ -55,33 +55,8 @@ def _vlup(vocab_dict, words):
     return tuple(_vget(vocab_dict, word) for word in words)
 
 
-def _get_text(anno, key):
-    if key.startswith('T') or key.startswith('CT'):
-        value = anno['text'][key]['value']
-        return value
-    elif key.startswith('O') or key.startswith('CO'):
-        d = anno['objects'][key]
-        if 'text' in d and len(d['text']) > 0:
-            new_key = d['text'][0]
-            return _get_text(anno, new_key)
-    elif key.startswith('B') or key.startswith('CB'):
-        try:
-            values = anno['relationships']['intraObject']['label'].values()
-        except:
-            return None
-        for d in values:
-            category = d['category']
-            if category in ['arrowHeadTail', 'arrowDescriptor']:
-                continue
-            dest = d['destination'][0]
-            origin = d['origin'][0]
-            if dest == key:
-                return _get_text(anno, origin)
-            elif origin == key:
-                return _get_text(anno, dest)
-    else:
-        raise Exception(key)
-    return None
+def _get(id_map, key):
+    return id_map[key] if key in id_map else None
 
 
 def _get_center(anno, key):
@@ -117,14 +92,14 @@ TEMPLATES = ["%s links to %s.",
              "arrows objects regions 0 1 2 3 4 5 6 7 8 9"]
 
 
-def rel2text(anno, rel):
+def rel2text(id_map, rel):
     MAX_LABEL_SIZE = 3
     tup = rel[:3]
     o_keys, d_keys = rel[3:]
     if tup == ('interObject', 'linkage', 'objectToObject'):
         template = TEMPLATES[0]
-        o = _get_text(anno, o_keys[0]) if len(o_keys) else None
-        d = _get_text(anno, d_keys[0]) if len(d_keys) else None
+        o = _get(id_map, o_keys[0]) if len(o_keys) else None
+        d = _get(id_map, d_keys[0]) if len(d_keys) else None
         if not (o and d):
             return None
         print(o_keys, d_keys)
@@ -139,7 +114,7 @@ def rel2text(anno, rel):
 
     elif tup == ('intraObject', 'linkage', 'regionDescription'):
         template = TEMPLATES[3]
-        o = _get_text(anno, o_keys[0]) if len(o_keys) else None
+        o = _get(id_map, o_keys[0]) if len(o_keys) else None
         o = o or "an object"
         o_words = _tokenize(o)
         if len(o_words) > MAX_LABEL_SIZE:
@@ -149,7 +124,7 @@ def rel2text(anno, rel):
 
     elif tup == ('unary', '', 'regionDescriptionNoArrow'):
         template = TEMPLATES[3]
-        o = _get_text(anno, o_keys[0]) if len(o_keys) else None
+        o = _get(id_map, o_keys[0]) if len(o_keys) else None
         o = o or "an object"
         o_words = _tokenize(o)
         if len(o_words) > MAX_LABEL_SIZE:
@@ -159,7 +134,7 @@ def rel2text(anno, rel):
 
     elif tup[0] == 'unary' and tup[2] in ['objectLabel', 'ownObject']:
         template = TEMPLATES[1]
-        val =_get_text(anno, o_keys[0])
+        val =_get(id_map, o_keys[0])
         if val is not None:
             words = _tokenize(val)
             if len(words) > MAX_LABEL_SIZE:
@@ -169,7 +144,7 @@ def rel2text(anno, rel):
 
     elif tup == ('unary', '', 'regionLabel'):
         template = TEMPLATES[1]
-        val =_get_text(anno, o_keys[0])
+        val =_get(id_map, o_keys[0])
         if val is not None:
             words = _tokenize(val)
             if len(words) > MAX_LABEL_SIZE:
@@ -179,12 +154,12 @@ def rel2text(anno, rel):
 
     elif tup == ('unary', '', 'imageTitle'):
         template = TEMPLATES[2]
-        val = _get_text(anno, o_keys[0])
+        val = _get(id_map, o_keys[0])
         return template % val
 
     elif tup == ('unary', '', 'sectionTitle'):
         template = TEMPLATES[2]
-        val = _get_text(anno, o_keys[0])
+        val = _get(id_map, o_keys[0])
         return template % val
 
     elif tup[0] == 'count':
@@ -194,7 +169,7 @@ def rel2text(anno, rel):
         return template % (num, category)
 
     elif tup[0] == 'unary':
-        val = _get_text(anno, o_keys[0])
+        val = _get(id_map, o_keys[0])
         return val
 
     return None
@@ -230,7 +205,7 @@ def anno2rels(anno):
                 types.add((type_, subtype, category))
     return rels
 
-def get_id_map(anno):
+def _get_id_map(anno):
     id_map = {}
     for key, d in anno['text'].items():
         id_map[key] = d['value']
@@ -248,6 +223,13 @@ def get_id_map(anno):
                     category = dd['category']
                     if category in ['arrowHeadTail', 'arrowDescriptor']:
                         continue
+                    origin = dd['origin'][0]
+                    dest = dd['destination'][0]
+                    if origin.startswith("CT") or origin.startswith("T"):
+                        id_map[dest] = id_map[origin]
+                    elif dest.startswith("CT") or dest.startswith("T"):
+                        id_map[origin] = id_map[dest]
+    return id_map
 
 
 
@@ -282,7 +264,8 @@ def prepro_annos(args):
         anno_path = os.path.join(annos_dir, anno_name)
         anno = json.load(open(anno_path, 'r'))
         rels = anno2rels(anno)
-        text_facts = [rel2text(anno, rel) for rel in rels]
+        id_map = _get_id_map(anno)
+        text_facts = [rel2text(id_map, rel) for rel in rels]
         text_facts = [fact for fact in text_facts if fact is not None]
         tokenized_facts = [_tokenize(fact) for fact in text_facts]
         indexed_facts = list(set(_vlup(vocab, fact) for fact in tokenized_facts))
