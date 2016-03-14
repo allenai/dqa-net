@@ -255,9 +255,13 @@ class AttentionModel(BaseModel):
                 self.y = tf.placeholder('int8', [N, C], name='y')
 
         with tf.variable_scope('first_u'):
-            sent_encoder = LSTMSentenceEncoder(params)
-            self.init_emb_mat = sent_encoder.init_emb_mat
-            first_u = sent_encoder(self.s, name='first_u')
+            u_encoder = LSTMSentenceEncoder(params)
+            self.init_emb_mat = u_encoder.init_emb_mat
+            first_u = u_encoder(self.s, name='first_u')
+        with tf.variable_scope('first_v'):
+            v_encoder = LSTMSentenceEncoder(params)
+            first_v = v_encoder(self.s, name='first_v')
+
 
         layers = []
         prev_layer = None
@@ -266,12 +270,12 @@ class AttentionModel(BaseModel):
                 if prev_layer:
                     cur_layer = Layer(params, self.f, prev_layer=prev_layer)
                 else:
-                    cur_layer = Layer(params, self.f, u=first_u, sent_encoder=sent_encoder)
+                    cur_layer = Layer(params, self.f, u=first_u, sent_encoder=u_encoder)
                 layers.append(cur_layer)
                 prev_layer = cur_layer
         last_layer = layers[-1]
 
-        sim = Sim(params, self.f, sent_encoder, first_u)
+        sim = Sim(params, self.f, u_encoder, first_u)
 
         if params.model == 'sim':
             with tf.variable_scope("sim"):
@@ -290,7 +294,7 @@ class AttentionModel(BaseModel):
             gate = tf.nn.sigmoid(raw_gate, name='gate')
             gate_aug = tf.expand_dims(gate, -1, name='gate_aug')
             gate_avg = tf.reduce_mean(gate, 0, name='gate_avg')
-            sent_logit_aug = nn.linear([N, C, d], 1, first_u, 'sent_logit')
+            sent_logit_aug = nn.linear([N, C, d], 1, first_v, 'sent_logit')
             sent_logit = tf.squeeze(sent_logit_aug, [2])
             mem_logit = logit
             if params.mode == 'l':
