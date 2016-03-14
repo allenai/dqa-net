@@ -102,7 +102,6 @@ def rel2text(id_map, rel):
         d = _get(id_map, d_keys[0]) if len(d_keys) else None
         o = o or "object"
         d = d or "object"
-        print(o_keys, d_keys)
         o_words = _tokenize(o)
         d_words = _tokenize(d)
         if len(o_words) > MAX_LABEL_SIZE:
@@ -266,6 +265,7 @@ def prepro_annos(args):
         anno_path = os.path.join(annos_dir, anno_name)
         anno = json.load(open(anno_path, 'r'))
         rels = anno2rels(anno)
+        print(rels)
         id_map = _get_id_map(anno)
         text_facts = [rel2text(id_map, rel) for rel in rels]
         text_facts = [fact for fact in text_facts if fact is not None]
