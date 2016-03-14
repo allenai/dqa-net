@@ -198,7 +198,7 @@ def anno2rels(anno):
             for rel_id, ddd in dd.items():
                 category = ddd['category']
                 origin = ddd['origin'] if 'origin' in ddd else ""
-                destination = ddd['destination'] if 'destination' in dd else ""
+                destination = ddd['destination'] if 'destination' in ddd else ""
                 rel = Relation(type_, subtype, category, origin, destination)
                 rels.append(rel)
                 types.add((type_, subtype, category))
@@ -261,11 +261,9 @@ def prepro_annos(args):
     for i, anno_name in enumerate(anno_names):
         image_name, _ = os.path.splitext(anno_name)
         image_id, _ = os.path.splitext(image_name)
-        print(image_id)
         anno_path = os.path.join(annos_dir, anno_name)
         anno = json.load(open(anno_path, 'r'))
         rels = anno2rels(anno)
-        print(rels)
         id_map = _get_id_map(anno)
         text_facts = [rel2text(id_map, rel) for rel in rels]
         text_facts = [fact for fact in text_facts if fact is not None]
