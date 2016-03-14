@@ -139,7 +139,7 @@ def rel2text(anno, rel):
         text = template % o
         return text
 
-    elif tup == ('unary', '', 'objectLabel'):
+    elif tup[0] == 'unary' and tup[2] in ['objectLabel', 'ownObject']:
         template = TEMPLATES[1]
         val =_get_text(anno, o_keys[0])
         if val is not None:
@@ -159,18 +159,6 @@ def rel2text(anno, rel):
             else:
                 return template % val
 
-    elif tup == ('unary', '', 'imageCaption'):
-        val = _get_text(anno, o_keys[0])
-        return val
-
-    elif tup == ('unary', '', ''):
-        val = _get_text(anno, o_keys[0])
-        return val
-
-    elif tup == ('unary', '', 'arrowDescriptor'):
-        val = _get_text(anno, o_keys[0])
-        return val
-
     elif tup == ('unary', '', 'imageTitle'):
         template = TEMPLATES[2]
         val = _get_text(anno, o_keys[0])
@@ -186,6 +174,10 @@ def rel2text(anno, rel):
         category = tup[2]
         num = str(o_keys)
         return template % (num, category)
+
+    elif tup[0] == 'unary':
+        val = _get_text(anno, o_keys[0])
+        return val
 
     return None
 

@@ -284,7 +284,8 @@ class AttentionModel(BaseModel):
 
 
         with tf.variable_scope("merge"):
-            raw_gate_aug = nn.linear([N, C], 1, logit) # [N, 1]
+            # raw_gate_aug = nn.linear([N, C], 1, logit) # [N, 1]
+            raw_gate_aug = tf.reduce_sum(logit, 1)
             gate_aug = tf.nn.sigmoid(raw_gate_aug)
             gate = tf.squeeze(gate_aug, [1], name='gate')
             gate_avg = tf.reduce_mean(gate, 0, name='gate_avg')
@@ -378,9 +379,13 @@ class AttentionModel(BaseModel):
         factor = anneal_ratio ** num_periods
 
         if params.use_null:
-            learning_rate *= factor
+            nw_period = params.nw_period
+            nw_ratio = params.nw_ratio
+            nw_num_periods = int(epoch_idx / nw_period)
+            nw_factor = nw_ratio ** nw_num_periods
+            null_weight *= nw_factor
         if params.opt == 'basic':
-            null_weight *= factor
+            learning_rate *= factor
 
         train_args = {'null_weight': null_weight, 'learning_rate': learning_rate}
         return train_args
