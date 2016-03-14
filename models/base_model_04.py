@@ -63,11 +63,12 @@ class BaseModel(object):
         params = self.params
         num_epochs = params.num_epochs
         num_batches = params.train_num_batches
+        num_digits = int(np.log10(num_batches))
 
         print("training %d epochs ..." % num_epochs)
         for epoch_idx in range(num_epochs):
             train_args = self._get_train_args(epoch_idx)
-            pbar = get_pbar(num_batches, "epoch %d|" % epoch_idx).start()
+            pbar = get_pbar(num_batches, "epoch %s|" % str(epoch_idx).zfill(num_digits)).start()
             for num_batches_completed in range(num_batches):
                 batch = train_data_set.get_next_labeled_batch()
                 _, summary_str, global_step = self.train_batch(sess, batch, **train_args)
