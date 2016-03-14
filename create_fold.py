@@ -33,23 +33,33 @@ def create_linear_fold():
     json.dump(fold, open(fold_path, 'w'))
 
 
-def create_categorized_fold():
+def create_randomly_categorized_fold():
     parser = argparse.ArgumentParser()
     parser.add_argument("cat_path")
     parser.add_argument("fold_path")
-    parser.add_argument("--ratio", type=float, default=0.8)
+    parser.add_argument("--test_cats", nargs='*')
+    parser.add_argument("--ratio", type=float)
     args = parser.parse_args()
     cats_path = args.cat_path
+    test_cats = args.test_cats
     cat_dict = json.load(open(cats_path, 'r'))
     ids_dict = defaultdict(set)
     for image_name, cat in cat_dict.items():
         image_id, _ = os.path.splitext(image_name)
         ids_dict[cat].add(image_id)
+
     cats = list(ids_dict.keys())
-    random.shuffle(cats)
-    mid = int(args.ratio * len(cats))
-    train_cats = cats[:mid]
-    test_cats = cats[mid:]
+    print(cats)
+    if test_cats is None:
+        random.shuffle(cats)
+        mid = int(args.ratio * len(cats))
+        train_cats = cats[:mid]
+        test_cats = cats[mid:]
+    else:
+        for cat in test_cats:
+            assert cat in ids_dict, "%d id not a valid category." % cat
+        train_cats = [cat for cat in cats if cat not in test_cats]
+
     print("train categories: %s" % ", ".join(train_cats))
     print("test categories: %s" % ", ".join(test_cats))
     train_ids = sorted(set.union(*[ids_dict[cat] for cat in train_cats]), key=lambda x: int(x))
@@ -57,6 +67,7 @@ def create_categorized_fold():
     fold = {'train': train_ids, 'test': test_ids, 'trainCats': train_cats, 'testCats': test_cats}
     json.dump(fold, open(args.fold_path, "w"))
 
+
 if __name__ == "__main__":
     # create_linear_fold(ARGS)
-    create_categorized_fold()
+    create_randomly_categorized_fold()

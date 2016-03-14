@@ -188,8 +188,10 @@ def anno2rels(anno):
         rels.append(rel)
 
     # Counting
-    rels.append(Relation('count', '', 'stages', len(anno['arrows']) if 'arrows' in anno and len(anno['arrows']) else 0, ''))
-    rels.append(Relation('count', '', 'objects', len(anno['objects']) if 'objects' in anno and len(anno['objects']) else 0, ''))
+    if 'arrows' in anno and len(anno['arrows']) > 0:
+        rels.append(Relation('count', '', 'stages', len(anno['arrows']), ''))
+    if 'objects' in anno and len(anno['objects']) > 0:
+        rels.append(Relation('count', '', 'objects', len(anno['objects']), ''))
 
     if 'relationships' not in anno:
         return rels
