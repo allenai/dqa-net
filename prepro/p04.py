@@ -79,8 +79,7 @@ def _get_text(anno, key):
                 return _get_text(anno, origin)
             elif origin == key:
                 return _get_text(anno, dest)
-            else:
-                raise Exception((dest, origin, key))
+        raise Exception(key)
     else:
         raise Exception(key)
     return None
@@ -257,6 +256,7 @@ def prepro_annos(args):
     for i, anno_name in enumerate(anno_names):
         image_name, _ = os.path.splitext(anno_name)
         image_id, _ = os.path.splitext(image_name)
+        print(image_id)
         anno_path = os.path.join(annos_dir, anno_name)
         anno = json.load(open(anno_path, 'r'))
         rels = anno2rels(anno)
