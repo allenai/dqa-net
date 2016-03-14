@@ -56,15 +56,15 @@ def _vlup(vocab_dict, words):
 
 
 def _get_text(anno, key):
-    if key[0] == 'T' or key[:2] == 'CT':
+    if key.startswith('T') or key.startswith('CT'):
         value = anno['text'][key]['value']
         return value
-    elif key[0] == 'O':
+    elif key.startswith('O') or key.startswith('CO'):
         d = anno['objects'][key]
         if 'text' in d and len(d['text']) > 0:
             new_key = d['text'][0]
             return _get_text(anno, new_key)
-    elif key[0] == 'B' or key[:2] == 'CB':
+    elif key.startswith('B') or key.startswith('CB'):
         try:
             values = anno['relationships']['intraObject']['label'].values()
         except:
@@ -75,11 +75,12 @@ def _get_text(anno, key):
                 return None
             dest = d['destination'][0]
             origin = d['origin'][0]
-            print(dest, origin)
             if dest == key:
                 return _get_text(anno, origin)
             elif origin == key:
                 return _get_text(anno, dest)
+            else:
+                raise Exception((dest, origin, key))
     else:
         raise Exception(key)
     return None
