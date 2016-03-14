@@ -76,10 +76,8 @@ def _get_text(anno, key):
             dest = d['destination'][0]
             origin = d['origin'][0]
             if dest == key:
-                print(dest, origin, key)
                 return _get_text(anno, origin)
             elif origin == key:
-                print(dest, origin, key)
                 return _get_text(anno, dest)
     else:
         raise Exception(key)
@@ -128,6 +126,7 @@ def rel2text(anno, rel):
         o = _get_text(anno, o_keys[0]) if len(o_keys) else None
         d = _get_text(anno, d_keys[0]) if len(d_keys) else None
         if not (o and d):
+            print(o_keys, d_keys)
             return None
         o_words = _tokenize(o)
         d_words = _tokenize(d)
