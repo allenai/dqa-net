@@ -72,7 +72,7 @@ def _get_text(anno, key):
         for d in values:
             category = d['category']
             if category in ['arrowHeadTail', 'arrowDescriptor']:
-                return None
+                continue
             dest = d['destination'][0]
             origin = d['origin'][0]
             if dest == key:
@@ -229,6 +229,28 @@ def anno2rels(anno):
                 rels.append(rel)
                 types.add((type_, subtype, category))
     return rels
+
+def get_id_map(anno):
+    id_map = {}
+    for key, d in anno['text'].items():
+        id_map[key] = d['value']
+    for key, d in anno['objects'].items():
+        if 'text' in d and len(d['text']) > 0:
+            new_key = d['text'][0]
+            id_map[key] = id_map[new_key]
+    if 'relationships' in anno:
+        d = anno['relationships']
+        if 'intraOjbect' in d:
+            d = d['intraOjbect']
+            if 'label' in d:
+                d = d['label']
+                for _, dd in d.items():
+                    category = dd['category']
+                    if category in ['arrowHeadTail', 'arrowDescriptor']:
+                        continue
+
+
+
 
 def prepro_annos(args):
     data_dir = args.data_dir
