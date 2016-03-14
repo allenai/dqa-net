@@ -285,9 +285,10 @@ class AttentionModel(BaseModel):
 
         with tf.variable_scope("merge"):
             # raw_gate_aug = nn.linear([N, C], 1, logit) # [N, 1]
-            raw_gate_aug = tf.reduce_sum(logit, 1)
-            gate_aug = tf.nn.sigmoid(raw_gate_aug)
-            gate = tf.squeeze(gate_aug, [1], name='gate')
+            raw_gate = tf.reduce_sum(logit, 1)
+            raw_gate_aug = tf.expand_dims(raw_gate, -1, name='raw_gate_aug')
+            gate = tf.nn.sigmoid(raw_gate, name='gate')
+            gate_aug = tf.expand_dims(gate, -1, name='gate_aug')
             gate_avg = tf.reduce_mean(gate, 0, name='gate_avg')
             sent_logit_aug = nn.linear([N, C, d], 1, first_u, 'sent_logit')
             sent_logit = tf.squeeze(sent_logit_aug, [2])
