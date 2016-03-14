@@ -205,8 +205,8 @@ def anno2rels(anno):
         for subtype, dd in d.items():
             for rel_id, ddd in dd.items():
                 category = ddd['category']
-                origin = ddd['origin']
-                destination = ddd['destination']
+                origin = ddd['origin'] if 'origin' in ddd else ""
+                destination = ddd['destination'] if 'destination' in dd else ""
                 rel = Relation(type_, subtype, category, origin, destination)
                 rels.append(rel)
                 types.add((type_, subtype, category))
