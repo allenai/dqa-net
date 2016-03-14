@@ -70,6 +70,9 @@ def _get_text(anno, key):
         except:
             return None
         for d in values:
+            category = d['category']
+            if category in ['arrowHeadTail', 'arrowDescriptor']:
+                return None
             dest = d['destination']
             origin = d['origin']
             if dest == key:
