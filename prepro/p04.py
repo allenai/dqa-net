@@ -126,8 +126,8 @@ def rel2text(anno, rel):
         o = _get_text(anno, o_keys[0]) if len(o_keys) else None
         d = _get_text(anno, d_keys[0]) if len(d_keys) else None
         if not (o and d):
-            print(o_keys, d_keys)
             return None
+        print(o_keys, d_keys)
         o_words = _tokenize(o)
         d_words = _tokenize(d)
         if len(o_words) > MAX_LABEL_SIZE:
