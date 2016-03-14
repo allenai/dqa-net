@@ -41,11 +41,9 @@ class Memory(Sentence):
 
 
 class SentenceEncoder(object):
-    def __init__(self, params):
+    def __init__(self, params, emb_mat):
         self.V, self.d, self.L, self.e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
         # self.init_emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
-        self.init_emb_mat = tf.placeholder('float', shape=[self.V, self.e], name='init_emb_mat')
-        emb_mat = self.init_emb_mat
         prev_size = self.e
         hidden_sizes = [self.d for _ in range(params.emb_num_layers)]
         for layer_idx in range(params.emb_num_layers):
@@ -75,12 +73,9 @@ class SentenceEncoder(object):
 
 
 class LSTMSentenceEncoder(object):
-    def __init__(self, params):
+    def __init__(self, params, emb_mat):
         self.params = params
         V, d, L, e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
-        # self.init_emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
-        self.init_emb_mat = tf.placeholder('float', shape=[V, e], name='init_emb_mat')
-        emb_mat = self.init_emb_mat
         """
         prev_size = self.e
         hidden_sizes = [self.d for _ in range(params.emb_num_layers)]
@@ -240,6 +235,7 @@ class AttentionModel(BaseModel):
         params = self.params
         V, d, G = params.vocab_size, params.hidden_size, params.image_size
         N, C, J = params.batch_size, params.num_choices, params.max_sent_size
+        e = params.word_size
 
         summaries = []
 
@@ -253,13 +249,13 @@ class AttentionModel(BaseModel):
                 self.y = tf.placeholder('float', [N, C+1], name='y')
             else:
                 self.y = tf.placeholder('int8', [N, C], name='y')
+            self.init_emb_mat = tf.placeholder('float', shape=[V, e], name='init_emb_mat')
 
         with tf.variable_scope('first_u'):
-            u_encoder = LSTMSentenceEncoder(params)
-            self.init_emb_mat = u_encoder.init_emb_mat
+            u_encoder = LSTMSentenceEncoder(params, self.init_emb_mat)
             first_u = u_encoder(self.s, name='first_u')
         with tf.variable_scope('first_v'):
-            v_encoder = LSTMSentenceEncoder(params)
+            v_encoder = LSTMSentenceEncoder(params, self.init_emb_mat)
             first_v = v_encoder(self.s, name='first_v')
 
 
