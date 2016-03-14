@@ -207,12 +207,14 @@ def anno2rels(anno):
 
 def _get_id_map(anno):
     id_map = {}
-    for key, d in anno['text'].items():
-        id_map[key] = d['value']
-    for key, d in anno['objects'].items():
-        if 'text' in d and len(d['text']) > 0:
-            new_key = d['text'][0]
-            id_map[key] = id_map[new_key]
+    if 'text' in anno:
+        for key, d in anno['text'].items():
+            id_map[key] = d['value']
+    if 'objects' in anno:
+        for key, d in anno['objects'].items():
+            if 'text' in d and len(d['text']) > 0:
+                new_key = d['text'][0]
+                id_map[key] = id_map[new_key]
     if 'relationships' in anno:
         d = anno['relationships']
         if 'intraOjbect' in d:
