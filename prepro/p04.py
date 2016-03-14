@@ -56,7 +56,7 @@ def _vlup(vocab_dict, words):
 
 
 def _get_text(anno, key):
-    if key[0] == 'T':
+    if key[0] == 'T' or key[:2] == 'CT':
         value = anno['text'][key]['value']
         return value
     elif key[0] == 'O':
@@ -64,6 +64,18 @@ def _get_text(anno, key):
         if 'text' in d and len(d['text']) > 0:
             new_key = d['text'][0]
             return _get_text(anno, new_key)
+    elif key[0] == 'B' or key[:2] == 'CB':
+        try:
+            values = anno['relationships']['intraObject']['label'].values()
+        except:
+            return None
+        for d in values:
+            dest = d['destination']
+            origin = d['origin']
+            if dest == key:
+                return _get_text(anno, origin)
+            elif origin == key:
+                return _get_text(anno, dest)
     return None
 
 
