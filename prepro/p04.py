@@ -75,6 +75,7 @@ def _get_text(anno, key):
                 return None
             dest = d['destination'][0]
             origin = d['origin'][0]
+            print(dest, origin)
             if dest == key:
                 return _get_text(anno, origin)
             elif origin == key:
