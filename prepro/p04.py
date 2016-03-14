@@ -100,15 +100,15 @@ def rel2text(id_map, rel):
         template = TEMPLATES[0]
         o = _get(id_map, o_keys[0]) if len(o_keys) else None
         d = _get(id_map, d_keys[0]) if len(d_keys) else None
-        if not (o and d):
-            return None
+        o = o or "object"
+        d = d or "object"
         print(o_keys, d_keys)
         o_words = _tokenize(o)
         d_words = _tokenize(d)
         if len(o_words) > MAX_LABEL_SIZE:
-            o = "an object"
+            o = "object"
         if len(d_words) > MAX_LABEL_SIZE:
-            d = "an object"
+            d = "object"
         text = template % (o, d)
         return text
 
