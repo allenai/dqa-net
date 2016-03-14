@@ -7,6 +7,7 @@ import progressbar as pb
 import tensorflow as tf
 
 from read_data.r04 import DataSet
+from utils import get_pbar
 
 
 class BaseModel(object):
@@ -33,18 +34,21 @@ class BaseModel(object):
         # TODO : Implement this! Either here or by creating a child class.
         raise Exception("Implement this!")
 
-    def _get_feed_dict(self, batch):
+    def _get_feed_dict(self, batch, train, **kwargs):
         # TODO : Implement this!
         raise Exception("Implement this!")
 
-    def train_batch(self, sess, learning_rate, batch):
-        feed_dict = self._get_feed_dict(batch)
-        feed_dict[self.learning_rate] = learning_rate
+    def _get_train_args(self, epoch_idx):
+        # TODO : Implement this!
+        raise Exception("Implement this!")
+
+    def train_batch(self, sess, batch, **kwargs):
+        feed_dict = self._get_feed_dict(batch, 'train', **kwargs)
         return sess.run([self.opt_op, self.merged_summary, self.global_step], feed_dict=feed_dict)
 
     def eval_batch(self, sess, batch, eval_tensors=None):
         actual_batch_size = len(batch[0])
-        feed_dict = self._get_feed_dict(batch)
+        feed_dict = self._get_feed_dict(batch, 'eval')
         correct_vec, total_loss, summary_str, global_step = \
             sess.run([self.correct_vec, self.total_loss, self.merged_summary, self.global_step], feed_dict=feed_dict)
         num_corrects = np.sum(correct_vec[:actual_batch_size])
@@ -55,23 +59,18 @@ class BaseModel(object):
     def train(self, sess, writer, train_data_set, val_data_set, eval_tensors=None):
         assert isinstance(train_data_set, DataSet), train_data_set.__class__.__name__
         assert isinstance(val_data_set, DataSet), train_data_set.__class__.__name__
+
         params = self.params
-        learning_rate = params.init_lr
         num_epochs = params.num_epochs
         num_batches = params.train_num_batches
-        anneal_period = params.anneal_period
-        anneal_ratio = params.anneal_ratio
 
         print("training %d epochs ..." % num_epochs)
         for epoch_idx in range(num_epochs):
-            if epoch_idx > 0 and epoch_idx % anneal_period == 0:
-                learning_rate *= anneal_ratio
-            pbar = pb.ProgressBar(widgets=["epoch %d|" % (train_data_set.num_epochs_completed + 1),
-                                           pb.Percentage(), pb.Bar(), pb.ETA()], maxval=num_batches)
-            pbar.start()
+            train_args = self._get_train_args(epoch_idx)
+            pbar = get_pbar(num_batches, "epoch ").start()
             for num_batches_completed in range(num_batches):
                 batch = train_data_set.get_next_labeled_batch()
-                _, summary_str, global_step = self.train_batch(sess, learning_rate, batch)
+                _, summary_str, global_step = self.train_batch(sess, batch, **train_args)
                 writer.add_summary(summary_str, global_step)
                 pbar.update(num_batches_completed)
             pbar.finish()

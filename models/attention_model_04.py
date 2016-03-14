@@ -249,7 +249,10 @@ class AttentionModel(BaseModel):
             self.s = Sentence([N, C, J], 's')
             self.f = Memory(params, 'f')
             self.image = tf.placeholder('float', [N, G], name='i')
-            self.y = tf.placeholder('int8', [N, C], name='y')
+            if params.use_null:
+                self.y = tf.placeholder('float', [N, C+1], name='y')
+            else:
+                self.y = tf.placeholder('int8', [N, C], name='y')
 
         with tf.variable_scope('first_u'):
             sent_encoder = LSTMSentenceEncoder(params)
@@ -281,10 +284,10 @@ class AttentionModel(BaseModel):
 
 
         with tf.variable_scope("merge"):
-            W = tf.get_variable("multiplier", shape=[])
-            b = tf.get_variable("bias", shape=[])
-            gate = tf.nn.sigmoid(W*tf.reduce_max(logit, 1) + b)
-            gate_aug = tf.expand_dims(gate, -1)  # [N, 1]
+            raw_gate_aug = nn.linear([N, C], 1, logit) # [N, 1]
+            gate_aug = tf.nn.sigmoid(raw_gate_aug)
+            gate = tf.squeeze(gate_aug, [1], name='gate')
+            gate_avg = tf.reduce_mean(gate, 0, name='gate_avg')
             sent_logit_aug = nn.linear([N, C, d], 1, first_u, 'sent_logit')
             sent_logit = tf.squeeze(sent_logit_aug, [2])
             mem_logit = logit
@@ -293,11 +296,16 @@ class AttentionModel(BaseModel):
             elif params.mode == 'a':
                 self.logit = mem_logit
             elif params.mode == 'la':
-                self.logit = gate_aug * mem_logit + (1 - gate_aug) * sent_logit
+                self.logit = (1 - gate_aug) * mem_logit + gate_aug * sent_logit
                 # self.logit = sig * memory_logit + (1 - sig) * sent_logit
+
+            if params.use_null:
+                self.logit = tf.concat(1, [self.logit, raw_gate_aug], name='logit_concat')
 
         with tf.variable_scope('yp'):
             self.yp = tf.nn.softmax(self.logit, name='yp')  # [N, C]
+            if params.use_null:
+                self.yp = tf.concat(1, [self.yp, gate_aug], 'yp_concat')
 
         with tf.name_scope('loss') as loss_scope:
             self.cross_entropy = tf.nn.softmax_cross_entropy_with_logits(self.logit, tf.cast(self.y, 'float'), name='cross_entropy')
@@ -329,14 +337,13 @@ class AttentionModel(BaseModel):
         summaries.append(tf.histogram_summary(last_layer.u.op.name, last_layer.u))
         summaries.append(tf.histogram_summary(last_layer.o.op.name, last_layer.o))
         summaries.append(tf.histogram_summary(last_layer.p.op.name, last_layer.p))
-        summaries.append(tf.scalar_summary(W.op.name, W))
-        summaries.append(tf.scalar_summary(b.op.name, b))
+        summaries.append(tf.scalar_summary(gate_avg.op.name, gate_avg))
         summaries.append(tf.scalar_summary("%s (raw)" % self.total_loss.op.name, self.total_loss))
         self.merged_summary = tf.merge_summary(summaries)
         self.last_layer = last_layer
         self.sim = sim
 
-    def _get_feed_dict(self, batch):
+    def _get_feed_dict(self, batch, mode, **kwargs):
         sents_batch, facts_batch, images_batch = batch[:-1]
         if len(batch) > 3:
             label_batch = batch[-1]
@@ -345,11 +352,38 @@ class AttentionModel(BaseModel):
         s = self._prepro_sents_batch(sents_batch)  # [N, C, J], [N, C]
         f = self._prepro_facts_batch(facts_batch)
         g = self._prepro_images_batch(images_batch)
-        y_batch = self._prepro_label_batch(label_batch)
-        feed_dict = {self.y: y_batch, self.image: g, self.init_emb_mat: self.params.init_emb_mat}
+        feed_dict = {self.image: g, self.init_emb_mat: self.params.init_emb_mat}
+        if mode == 'train':
+            learning_rate = kwargs['learning_rate']
+            null_weight = kwargs['null_weight']
+            feed_dict[self.learning_rate] = learning_rate
+            y_batch = self._prepro_label_batch(label_batch, null_weight=null_weight)
+        elif mode == 'eval':
+            y_batch = self._prepro_label_batch(label_batch)
+        else:
+            raise Exception()
+        feed_dict[self.y] = y_batch
         self.s.add(feed_dict, *s)
         self.f.add(feed_dict, *f)
         return feed_dict
+
+    def _get_train_args(self, epoch_idx):
+        params = self.params
+        learning_rate = params.init_lr
+        null_weight = params.init_nw
+
+        anneal_period = params.anneal_period
+        anneal_ratio = params.anneal_ratio
+        num_periods = int(epoch_idx / anneal_period)
+        factor = anneal_ratio ** num_periods
+
+        if params.use_null:
+            learning_rate *= factor
+        if params.opt == 'basic':
+            null_weight *= factor
+
+        train_args = {'null_weight': null_weight, 'learning_rate': learning_rate}
+        return train_args
 
     def _prepro_images_batch(self, images_batch):
         params = self.params
@@ -390,15 +424,21 @@ class AttentionModel(BaseModel):
 
         return s_batch, s_mask_batch, s_len_batch, m_mask_batch
 
-    def _prepro_label_batch(self, label_batch):
+    def _prepro_label_batch(self, label_batch, null_weight=0.0):
         p = self.params
         N, C = p.batch_size, p.num_choices
-        y = np.zeros([N, C], dtype='int8')
+        if p.use_null:
+            y = np.zeros([N, C+1], dtype='float')
+        else:
+            y = np.zeros([N, C], dtype='float')
         for i, label in enumerate(label_batch):
             y[i, label] = np.random.rand() * self.params.rand_y
             rand_other = (1.0 - self.params.rand_y)/(C-1)
             for cur in range(C):
                 if cur != label:
                     y[i, cur] = np.random.rand() * rand_other
-            y[i, :] /= sum(y[i, :])
+            y[i] = y[i] / sum(y[i])
+            if p.use_null:
+                y[i, C] = null_weight
+
         return y
