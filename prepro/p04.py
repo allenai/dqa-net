@@ -123,8 +123,8 @@ def rel2text(anno, rel):
         template = TEMPLATES[0]
         o = _get_text(anno, o_keys[0]) if len(o_keys) else None
         d = _get_text(anno, d_keys[0]) if len(d_keys) else None
-        o = o or "an object"
-        d = d or "an object"
+        if not (o and d):
+            return None
         o_words = _tokenize(o)
         d_words = _tokenize(d)
         if len(o_words) > MAX_LABEL_SIZE:
@@ -211,8 +211,8 @@ def anno2rels(anno):
         rels.append(rel)
 
     # Counting
-    rels.append(Relation('count', '', 'stages', len(anno['arrows']) if 'arrows' in anno else 0, ''))
-    rels.append(Relation('count', '', 'objects', len(anno['objects']) if 'objects' in anno else 0, ''))
+    rels.append(Relation('count', '', 'stages', len(anno['arrows']) if 'arrows' in anno and len(anno['arrows']) else 0, ''))
+    rels.append(Relation('count', '', 'objects', len(anno['objects']) if 'objects' in anno and len(anno['objects']) else 0, ''))
 
     if 'relationships' not in anno:
         return rels
