@@ -13,13 +13,6 @@ import numpy as np
 from utils import get_pbar
 
 
-def qa2hypo(question, answer, flag):
-    if flag == 'True':
-        from qa2hypo import qa2hypo as f
-        return f(question, answer, False)
-    return "%s %s" % (question, answer)
-
-
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("data_dir")
@@ -33,8 +26,15 @@ def get_args():
     return parser.parse_args()
 
 
+def qa2hypo(question, answer, flag):
+    if flag == 'True':
+        from qa2hypo import qa2hypo as f
+        return f(question, answer, False)
+    return "%s %s" % (question, answer)
+
+
 def _tokenize(raw):
-    tokens = re.findall(r"[\w]+", raw)
+    tokens = tuple(re.findall(r"[\w]+", raw))
     return tokens
 
 
@@ -59,40 +59,20 @@ def _get(id_map, key):
     return id_map[key] if key in id_map else None
 
 
-def _get_center(anno, key):
-    type_dict = {'T': 'text', 'A': 'arrows', 'B': 'blobs', 'H': 'arrowHeads', 'R': 'regions', 'O': 'objects'}
-    poly_dict = {'T': 'rectangle', 'A': 'polygon', 'B': 'polygon', 'H': 'rectangle', 'R': 'polygon'}
-    type_ = type_dict[key[0]]
-    if type_ == 'objects':
-        if 'blobs' in anno[type_][key] and len(anno[type_][key]['blobs']) > 0:
-            new_key = anno[type_][key]['blobs'][0]
-        elif 'text' in anno[type_][key]:
-            new_key = anno[type_][key]['text'][0]
-        else:
-            raise Exception("%r" % anno)
-        return _get_center(anno, new_key)
-    shape = poly_dict[key[0]]
-    poly = np.array(anno[type_][key][shape])
-    center = list(map(int, map(round, np.mean(poly, 0))))
-    return center
-
-
-def _get_head_center(anno, arrow_key):
-    if 'arrowHeads' not in anno['arrows'][arrow_key] or len(anno['arrows'][arrow_key]['arrowHeads']) == 0:
-        return [0, 0]
-    head_key = anno['arrows'][arrow_key]['arrowHeads'][0]
-    return _get_center(anno, head_key)
-
-
-TEMPLATES = ["%s links to %s.",
-             "there is %s.",
-             "the title is %s.",
-             "%s describes region.",
-             "there are %s %s.",
-             "arrows objects regions 0 1 2 3 4 5 6 7 8 9"]
-
-
 def rel2text(id_map, rel):
+    """
+    Obtain text facts from the relation class.
+    :param id_map:
+    :param rel:
+    :return:
+    """
+    TEMPLATES = ["%s links to %s.",
+                 "there is %s.",
+                 "the title is %s.",
+                 "%s describes region.",
+                 "there are %s %s.",
+                 "arrows objects regions 0 1 2 3 4 5 6 7 8 9",
+                 "% s and %s are related."]
     MAX_LABEL_SIZE = 3
     tup = rel[:3]
     o_keys, d_keys = rel[3:]
@@ -177,6 +157,7 @@ def rel2text(id_map, rel):
 Relation = namedtuple('Relation', 'type subtype category origin destination')
 categories = set()
 
+
 def anno2rels(anno):
     types = set()
     rels = []
@@ -205,6 +186,7 @@ def anno2rels(anno):
                 rels.append(rel)
                 types.add((type_, subtype, category))
     return rels
+
 
 def _get_id_map(anno):
     id_map = {}
@@ -235,31 +217,32 @@ def _get_id_map(anno):
     return id_map
 
 
-
-
 def prepro_annos(args):
+    """
+    Transform DQA annotation.json -> a list of tokenized fact sentences for each image in json file
+    The facts are indexed by image id.
+    :param args:
+    :return:
+    """
     data_dir = args.data_dir
     target_dir = args.target_dir
 
     # For debugging
     if args.debug == 'True':
-        sents_path =os.path.join(target_dir, "sents.json")
+        sents_path =os.path.join(target_dir, "raw_sents.json")
         answers_path =os.path.join(target_dir, "answers.json")
         sentss_dict = json.load(open(sents_path, 'r'))
         answers_dict = json.load(open(answers_path, 'r'))
 
-    vocab_path = os.path.join(target_dir, "vocab.json")
-    vocab = json.load(open(vocab_path, "r"))
-    facts_path = os.path.join(target_dir, "facts.json")
+    facts_path = os.path.join(target_dir, "raw_facts.json")
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     meta_data = json.load(open(meta_data_path, "r"))
     facts_dict = {}
     annos_dir = os.path.join(data_dir, "annotations")
     anno_names = [name for name in os.listdir(annos_dir) if name.endswith(".json")]
-    max_fact_size = 0
     max_num_facts = 0
-    pbar = get_pbar(len(anno_names))
-    # pbar.start()
+    max_fact_size = 0
+    pbar = get_pbar(len(anno_names)).start()
     for i, anno_name in enumerate(anno_names):
         image_name, _ = os.path.splitext(anno_name)
         image_id, _ = os.path.splitext(image_name)
@@ -268,32 +251,28 @@ def prepro_annos(args):
         rels = anno2rels(anno)
         id_map = _get_id_map(anno)
         text_facts = [rel2text(id_map, rel) for rel in rels]
-        text_facts = [fact for fact in text_facts if fact is not None]
-        tokenized_facts = [_tokenize(fact) for fact in text_facts]
-        indexed_facts = list(set(_vlup(vocab, fact) for fact in tokenized_facts))
+        text_facts = list(set(_tokenize(fact) for fact in text_facts if fact is not None))
+        max_fact_size = max(max_fact_size, max(len(fact) for fact in text_facts))
         # For debugging only
         if args.debug == 'True':
             if image_id in sentss_dict:
                 correct_sents = [sents[answer] for sents, answer in zip(sentss_dict[image_id], answers_dict[image_id])]
                 # indexed_facts.extend(correct_sents)
                 # FIXME : this is very strong prior!
-                indexed_facts = correct_sents
+                text_facts = correct_sents
             else:
-                indexed_facts = []
+                text_facts = []
+        facts_dict[image_id] = text_facts
+        max_num_facts = max(max_num_facts, len(text_facts))
+        pbar.update(i)
 
-        facts_dict[image_id] = indexed_facts
-        if len(indexed_facts) > 0:
-            max_fact_size = max(max_fact_size, max(len(fact) for fact in indexed_facts))
-        max_num_facts = max(max_num_facts, len(indexed_facts))
-        # pbar.update(i)
+    pbar.finish()
 
-    # pbar.finish()
-
-    meta_data['max_fact_size'] = max_fact_size
     meta_data['max_num_facts'] = max_num_facts
+    meta_data['max_fact_size'] = max_fact_size
     print("number of facts: %d" % sum(len(facts) for facts in facts_dict.values()))
+    print("max num facts per relation: %d" % max_num_facts)
     print("max fact size: %d" % max_fact_size)
-    print("max_num_facts: %d" % max_num_facts)
     print("dumping json files ... ")
     json.dump(meta_data, open(meta_data_path, 'w'))
     json.dump(facts_dict, open(facts_path, 'w'))
@@ -301,14 +280,18 @@ def prepro_annos(args):
 
 
 def prepro_questions(args):
+    """
+    transform DQA questions.json files -> single statements json and single answers json.
+    sentences and answers are doubly indexed by image id first and then question number within that image (0 indexed)
+    :param args:
+    :return:
+    """
     data_dir = args.data_dir
     target_dir = args.target_dir
     questions_dir = os.path.join(data_dir, "questions")
-    sents_path = os.path.join(target_dir, "sents.json")
+    raw_sents_path = os.path.join(target_dir, "raw_sents.json")
     answers_path = os.path.join(target_dir, "answers.json")
-    vocab_path = os.path.join(target_dir, "vocab.json")
     meta_data_path = os.path.join(target_dir, "meta_data.json")
-    vocab = json.load(open(vocab_path, "r"))
     meta_data = json.load(open(meta_data_path, "r"))
 
     sentss_dict = {}
@@ -316,9 +299,9 @@ def prepro_questions(args):
 
     ques_names = sorted([name for name in os.listdir(questions_dir) if os.path.splitext(name)[1].endswith(".json")],
                         key=lambda x: int(os.path.splitext(os.path.splitext(x)[0])[0]))
-    max_sent_size = 0
     num_choices = 0
     num_questions = 0
+    max_sent_size = 0
     pbar = get_pbar(len(ques_names)).start()
     for i, ques_name in enumerate(ques_names):
         image_name, _ = os.path.splitext(ques_name)
@@ -330,82 +313,54 @@ def prepro_questions(args):
         for ques_id, (ques_text, d) in enumerate(ques['questions'].items()):
             if d['abcLabel']:
                 continue
-            sents = [_vlup(vocab, _tokenize(qa2hypo(ques_text, choice, args.qa2hypo))) for choice in d['answerTexts']]
+            sents = [_tokenize(qa2hypo(ques_text, choice, args.qa2hypo)) for choice in d['answerTexts']]
+            max_sent_size = max(max_sent_size, max(len(sent) for sent in sents))
             assert not num_choices or num_choices == len(sents), "number of choices don't match: %s" % ques_name
             num_choices = len(sents)
-            # TODO : one hot vector or index?
             sentss.append(sents)
             answers.append(d['correctAnswer'])
-            max_sent_size = max(max_sent_size, max(len(sent) for sent in sents))
             num_questions += 1
         sentss_dict[image_id] = sentss
         answers_dict[image_id] = answers
         pbar.update(i)
     pbar.finish()
-    meta_data['max_sent_size'] = max_sent_size
     meta_data['num_choices'] = num_choices
+    meta_data['max_sent_size'] = max_sent_size
 
     print("number of questions: %d" % num_questions)
     print("number of choices: %d" % num_choices)
     print("max sent size: %d" % max_sent_size)
     print("dumping json file ... ")
-    json.dump(sentss_dict, open(sents_path, "w"))
+    json.dump(sentss_dict, open(raw_sents_path, "w"))
     json.dump(answers_dict, open(answers_path, "w"))
     json.dump(meta_data, open(meta_data_path, "w"))
     print("done")
 
 
 def build_vocab(args):
-    data_dir = args.data_dir
     target_dir = args.target_dir
-    min_count = args.min_count
     vocab_path = os.path.join(target_dir, "vocab.json")
     emb_mat_path = os.path.join(target_dir, "init_emb_mat.h5")
-    questions_dir = os.path.join(data_dir, "questions")
-    annos_dir = os.path.join(data_dir, "annotations")
+    raw_sents_path = os.path.join(target_dir, "raw_sents.json")
+    raw_facts_path = os.path.join(target_dir, "raw_facts.json")
+    raw_sentss_dict = json.load(open(raw_sents_path, 'r'))
+    raw_facts_dict = json.load(open(raw_facts_path, 'r'))
+
     meta_data_path = os.path.join(target_dir, "meta_data.json")
     meta_data = json.load(open(meta_data_path, 'r'))
     glove_path = args.glove_path
 
     word_counter = defaultdict(int)
-    anno_names = os.listdir(annos_dir)
-    pbar = get_pbar(len(anno_names))
-    pbar.start()
-    for i, anno_name in enumerate(anno_names):
-        if os.path.splitext(anno_name)[1] != ".json":
-            pbar.update(i)
-            continue
-        anno_path = os.path.join(annos_dir, anno_name)
-        anno = json.load(open(anno_path, "r"))
-        for _, d in anno['text'].items():
-            text = d['value']
-            for word in _tokenize(text):
-                _vadd(word_counter, word)
-        pbar.update(i)
-    pbar.finish()
 
-    ques_names = os.listdir(questions_dir)
-    pbar = get_pbar(len(ques_names))
-    pbar.start()
-    for i, ques_name in enumerate(ques_names):
-        if os.path.splitext(ques_name)[1] != ".json":
-            pbar.update(i)
-            continue
-        ques_path = os.path.join(questions_dir, ques_name)
-        ques = json.load(open(ques_path, "r"))
-        for ques_text, d in ques['questions'].items():
-            for word in _tokenize(ques_text):
-                _vadd(word_counter, word)
-            for choice in d['answerTexts']:
-                for word in _tokenize(choice):
+    for image_id, raw_sentss in raw_sentss_dict.items():
+        for raw_sents in raw_sentss:
+            for raw_sent in raw_sents:
+                for word in raw_sent:
                     _vadd(word_counter, word)
-        pbar.update(i)
-    pbar.finish()
 
-    # template
-    for template in TEMPLATES:
-        for word in _tokenize(template):
-            if not word.startswith("%"):
+    for image_id, raw_facts in raw_facts_dict.items():
+        for raw_fact in raw_facts:
+            for word in raw_fact:
                 _vadd(word_counter, word)
 
     word_list, counts = zip(*sorted([pair for pair in word_counter.items()], key=lambda x: -x[1]))
@@ -451,6 +406,26 @@ def build_vocab(args):
     f.close()
     json.dump(vocab, open(vocab_path, "w"))
     json.dump(meta_data, open(meta_data_path, "w"))
+    print("done")
+
+
+def indexing(args):
+    target_dir = args.target_dir
+    vocab_path = os.path.join(target_dir, "vocab.json")
+    raw_sents_path = os.path.join(target_dir, "raw_sents.json")
+    raw_facts_path = os.path.join(target_dir, "raw_facts.json")
+    sents_path = os.path.join(target_dir, "sents.json")
+    facts_path = os.path.join(target_dir, "facts.json")
+    vocab = json.load(open(vocab_path, 'r'))
+    raw_sentss_dict = json.load(open(raw_sents_path, 'r'))
+    raw_facts_dict = json.load(open(raw_facts_path, 'r'))
+
+    sentss_dict = {image_id: [[_vlup(vocab, sent) for sent in sents] for sents in sentss] for image_id, sentss in raw_sentss_dict.items()}
+    facts_dict = {image_id: [_vlup(vocab, fact) for fact in facts] for image_id, facts in raw_facts_dict.items()}
+
+    print("dumping json files ... ")
+    json.dump(sentss_dict, open(sents_path, 'w'))
+    json.dump(facts_dict, open(facts_path, 'w'))
     print("done")
 
 
@@ -502,8 +477,8 @@ if __name__ == "__main__":
     ARGS = get_args()
     create_meta_data(ARGS)
     create_image_ids_and_paths(ARGS)
-    build_vocab(ARGS)
     prepro_questions(ARGS)
     prepro_annos(ARGS)
-    print(categories)
+    build_vocab(ARGS)
+    indexing(ARGS)
     # prepro_images(ARGS)
