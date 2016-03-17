@@ -17,11 +17,12 @@ class BaseModel(object):
         self.save_dir = params.save_dir
         self.name = name or self.__class__.__name__
         self.initializer = tf.random_normal_initializer(params.init_mean, params.init_std)
-        self.num_epochs_completed = 0
         with graph.as_default(), tf.variable_scope(self.name, initializer=self.initializer):
             print("building %s tower ..." % self.name)
-            self.global_step = tf.get_variable('global_step', shape=[],
+            self.global_step = tf.get_variable('global_step', shape=[], dtype='int32',
                                                initializer=tf.constant_initializer(0), trainable=False)
+            self.epoch = tf.get_variable('epoch', shape=[], dtype='int32',
+                                         initializer=tf.constant_initializer(0), trainable=False)
             self.learning_rate = tf.placeholder('float32', name='lr')
             self.opt_op = None
             self.correct_vec = None
@@ -65,10 +66,11 @@ class BaseModel(object):
         num_batches = params.train_num_batches
         num_digits = int(np.log10(num_batches))
 
-        print("training %d epochs ..." % num_epochs)
-        for epoch_idx in range(num_epochs):
-            train_args = self._get_train_args(epoch_idx)
-            pbar = get_pbar(num_batches, "epoch %s|" % str(epoch_idx+1).zfill(num_digits)).start()
+        print("Training until epoch %d." % num_epochs)
+        epoch = sess.run(self.epoch)
+        while epoch < num_epochs:
+            train_args = self._get_train_args(epoch)
+            pbar = get_pbar(num_batches, "epoch %s|" % str(epoch+1).zfill(num_digits)).start()
             for num_batches_completed in range(num_batches):
                 batch = train_data_set.get_next_labeled_batch()
                 _, summary_str, global_step = self.train_batch(sess, batch, **train_args)
@@ -76,15 +78,19 @@ class BaseModel(object):
                 pbar.update(num_batches_completed)
             pbar.finish()
             train_data_set.complete_epoch()
-            self.num_epochs_completed += 1
 
-            if val_data_set and (epoch_idx + 1) % params.val_period == 0:
+            if val_data_set and (epoch + 1) % params.val_period == 0:
                 eval_tensors = eval_tensors if eval_tensors else []
                 self.eval(sess, train_data_set, is_val=True, eval_tensors=eval_tensors)
                 self.eval(sess, val_data_set, is_val=True, eval_tensors=eval_tensors)
 
-            if (epoch_idx + 1) % params.save_period == 0:
+            assign_op = self.epoch.assign_add(1)
+            _, epoch = sess.run([assign_op, self.epoch])
+
+            if epoch % params.save_period == 0:
                 self.save(sess)
+
+
         print("training done.")
 
     def eval(self, sess, eval_data_set, is_val=False, eval_tensors=None):
@@ -100,7 +106,7 @@ class BaseModel(object):
         num_corrects, total = 0, 0
         eval_values = []
         idxs= []
-        string = "%s:N=%d|" % (eval_data_set.name, eval_data_set.batch_size * num_batches)
+        string = "eval on %s: N=%d|" % (eval_data_set.name, eval_data_set.batch_size * num_batches)
         pbar = pb.ProgressBar(widgets=[string, pb.Percentage(), pb.Bar(), pb.ETA()], maxval=num_batches)
         losses = []
         pbar.start()
@@ -121,11 +127,12 @@ class BaseModel(object):
         zipped_eval_values = [list(itertools.chain(*each)) for each in zip(*eval_values)]
         values = {name: values for name, values in zip(eval_names, zipped_eval_values)}
         out = {'ids': ids, 'values': values}
-        eval_path = os.path.join(params.eval_dir, "%s_%s.json" % (eval_data_set.name, str(self.num_epochs_completed).zfill(4)))
+        epoch = sess.run(self.epoch)
+        eval_path = os.path.join(params.eval_dir, "%s_%s.json" % (eval_data_set.name, str(epoch).zfill(4)))
         json.dump(out, open(eval_path, 'w'))
 
-        print("at %d: acc = %.2f%% = %d / %d, loss = %.4f" %
-              (global_step, 100 * float(num_corrects)/total, num_corrects, total, loss))
+        print("at epoch %d: acc = %.2f%% = %d / %d, loss = %.4f" %
+              (epoch, 100 * float(num_corrects)/total, num_corrects, total, loss))
 
     def save(self, sess):
         print("saving model ...")
