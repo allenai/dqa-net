@@ -49,7 +49,9 @@ flags.DEFINE_boolean("use_null", False, "Use null weight [False]")
 
 # Training and testing options
 flags.DEFINE_boolean("train", False, "Train? Test if False [False]")
-flags.DEFINE_integer("val_num_batches", 5, "Val num batches [5]")
+flags.DEFINE_integer("val_num_batches", -1, "Val num batches. -1 for max possible. [-1]")
+flags.DEFINE_integer("train_num_batches", -1, "Train num batches. -1 for max possible [-1]")
+flags.DEFINE_integer("test_num_batches", -1, "Test num batches. -1 for max possible [-1]")
 flags.DEFINE_boolean("load", False, "Load from saved model? [False]")
 flags.DEFINE_boolean("progress", True, "Show progress? [True]")
 flags.DEFINE_boolean("gpu", False, 'Enable GPU? (Linux only) [False]')
@@ -71,13 +73,24 @@ flags.DEFINE_boolean("draft", False, "Draft? (quick build) [False]")
 
 FLAGS = flags.FLAGS
 
+
 def mkdirs(config):
-    eval_dir = "evals/%s" % config.model_name
-    eval_subdir = os.path.join(eval_dir, "c%s" % str(config.config).zfill(2))
-    log_dir = "logs/%s" % config.model_name
-    log_subdir = os.path.join(log_dir, "c%s" % str(config.config).zfill(2))
-    save_dir = "saves/%s" % config.model_name
-    save_subdir = os.path.join(save_dir, "c%s" % str(config.config).zfill(2))
+    evals_dir = "evals"
+    logs_dir = "logs"
+    saves_dir = "saves"
+    if not os.path.exists(evals_dir):
+        os.mkdir(evals_dir)
+    if not os.path.exists(logs_dir):
+        os.mkdir(logs_dir)
+    if not os.path.exists(saves_dir):
+        os.mkdir(saves_dir)
+
+    eval_dir = os.path.join(evals_dir, config.model_name)
+    eval_subdir = os.path.join(eval_dir, "%s" % str(config.config).zfill(2))
+    log_dir = os.path.join(logs_dir, config.model_name)
+    log_subdir = os.path.join(log_dir, "%s" % str(config.config).zfill(2))
+    save_dir = os.path.join(saves_dir, config.model_name)
+    save_subdir = os.path.join(save_dir, "%s" % str(config.config).zfill(2))
     config.eval_dir = eval_subdir
     config.log_dir = log_subdir
     config.save_dir = save_subdir
@@ -137,13 +150,8 @@ def main(_):
     if config.train:
         train_ds = read_data(config, 'train')
         val_ds = read_data(config, 'val')
-        config.train_num_batches = train_ds.num_batches
-        config.val_num_batches = min(config.val_num_batches, train_ds.num_batches, val_ds.num_batches)
-
-
     else:
         test_ds = read_data(config, 'test')
-        config.test_num_batches = test_ds.num_batches
 
     # For quick draft build (deubgging).
     if config.draft:
