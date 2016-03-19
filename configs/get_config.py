@@ -1,4 +1,3 @@
-from collections import namedtuple
 from copy import deepcopy
 
 
@@ -22,3 +21,13 @@ def get_config(d0, d1, priority=1):
     for key, val in d1.items():
         d[key] = val
     return Config(**d)
+
+def get_config_from_json(d0, json_path, priority=1):
+    pass
+
+def get_config_from_tsv(d0, tsv_path, priority=1):
+    pass
+
+
+
+

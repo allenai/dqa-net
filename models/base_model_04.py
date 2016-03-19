@@ -122,16 +122,17 @@ class BaseModel(object):
         loss = np.mean(losses)
         eval_data_set.reset()
 
+        epoch = sess.run(self.num_epochs_completed)
+        print("at epoch %d: acc = %.2f%% = %d / %d, loss = %.4f" %
+              (epoch, 100 * float(num_corrects)/total, num_corrects, total, loss))
+
+        # For outputting eval json files
         ids = [eval_data_set.idx2id[idx] for idx in idxs]
         zipped_eval_values = [list(itertools.chain(*each)) for each in zip(*eval_values)]
         values = {name: values for name, values in zip(eval_names, zipped_eval_values)}
         out = {'ids': ids, 'values': values}
-        epoch = sess.run(self.num_epochs_completed)
         eval_path = os.path.join(params.eval_dir, "%s_%s.json" % (eval_data_set.name, str(epoch).zfill(4)))
         json.dump(out, open(eval_path, 'w'))
-
-        print("at epoch %d: acc = %.2f%% = %d / %d, loss = %.4f" %
-              (epoch, 100 * float(num_corrects)/total, num_corrects, total, loss))
 
     def save(self, sess):
         print("saving model ...")
