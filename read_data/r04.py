@@ -6,6 +6,8 @@ import h5py
 import numpy as np
 import sys
 
+from configs.get_config import Config
+
 
 class DataSet(object):
     def __init__(self, name, batch_size, data, idxs, idx2id, include_leftover=False):
@@ -50,7 +52,7 @@ class DataSet(object):
 
 
 def read_data(params, mode):
-    print("loading {} data ... ".format(mode), end="")
+    print("loading {} data ... ".format(mode))
     data_dir = params.data_dir
 
     fold_path = params.fold_path
@@ -101,7 +103,6 @@ def read_data(params, mode):
 
 
 if __name__ == "__main__":
-    class Params(object): pass
-    params = Params()
+    params = Config()
     params.batch_size = 2
     params.train = True

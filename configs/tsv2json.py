@@ -10,6 +10,7 @@ def get_args():
     parser.add_argument("json_path")
     return parser.parse_args()
 
+
 def tsv2json(tsv_path, json_path):
     d = tsv2dict(tsv_path)
     json.dump(d, open(json_path, 'w'))

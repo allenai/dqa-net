@@ -6,8 +6,7 @@ from pprint import pprint
 import h5py
 import tensorflow as tf
 
-from configs.get_config import get_config
-from configs.c04 import configs
+from configs.get_config import get_config_from_file, get_config
 from models.attention_model_04 import AttentionModel
 from read_data.r04 import read_data
 
@@ -15,7 +14,7 @@ flags = tf.app.flags
 
 # File directories
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
-flags.DEFINE_string("model_name", "model_03", "Model name [model_03]")
+flags.DEFINE_string("model_name", "m04", "Model name [m04]")
 flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
 flags.DEFINE_string("fold_path", "data/s3/fold6.json", "fold json path [data/s3/fold6.json]")
 
@@ -25,7 +24,7 @@ flags.DEFINE_integer("hidden_size", 100, "Hidden size [100]")
 flags.DEFINE_integer("image_size", 4096, "Image size [4096]")
 flags.DEFINE_integer("num_layers", 3, "Number of layers [3]")
 flags.DEFINE_integer("rnn_num_layers", 1, "Number of rnn layers [2]")
-flags.DEFINE_integer("emb_num_layers", 0, "Number of embedding layers [3]")
+flags.DEFINE_integer("emb_num_layers", 0, "Number of embedding layers [0]")
 flags.DEFINE_float("init_mean", 0, "Initial weight mean [0]")
 flags.DEFINE_float("init_std", 0.1, "Initial weight std [0.1]")
 flags.DEFINE_float("init_lr", 0.01, "Initial learning rate [0.01]")
@@ -57,7 +56,8 @@ flags.DEFINE_boolean("progress", True, "Show progress? [True]")
 flags.DEFINE_boolean("gpu", False, 'Enable GPU? (Linux only) [False]')
 flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
-flags.DEFINE_integer("config", -1, "Config number to load. -1 to use currently defined config. [-1]")
+flags.DEFINE_string("config", -1, "Config file name to load. 'None' to use default config. [None]")
+flags.DEFINE_string("config_ext", ".tsv", "Config file extension [.tsv]")
 flags.DEFINE_string("mode", "la", "l | la [la]")
 flags.DEFINE_boolean("dot_diff_sim", False, "use DotDiffSim? [False]")
 flags.DEFINE_string("model", "sim", "sim | att [sim]")
@@ -136,9 +136,11 @@ def load_meta_data(config):
 
 
 def main(_):
-    config_dict = configs[FLAGS.config] if FLAGS.config >= 0 else {}
-    config = get_config(FLAGS.__flags, config_dict, 1)
-    config.main_name = __name__
+    if FLAGS.config == "None":
+        config = get_config(FLAGS.__flags, {})
+    else:
+        config_path = os.path.join("configs", "%s%s" % (FLAGS.model_name, FLAGS.config_ext))
+        config = get_config_from_file(FLAGS.__flags, config_path, FLAGS.config)
 
     load_meta_data(config)
     mkdirs(config)
