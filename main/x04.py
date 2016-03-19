@@ -7,7 +7,7 @@ import h5py
 import tensorflow as tf
 
 from configs.get_config import get_config_from_file, get_config
-from models.attention_model_04 import AttentionModel
+from models.m04 import AttentionModel
 from read_data.r04 import read_data
 
 flags = tf.app.flags
@@ -53,7 +53,8 @@ flags.DEFINE_integer("train_num_batches", -1, "Train num batches. -1 for max pos
 flags.DEFINE_integer("test_num_batches", -1, "Test num batches. -1 for max possible [-1]")
 flags.DEFINE_boolean("load", False, "Load from saved model? [False]")
 flags.DEFINE_boolean("progress", True, "Show progress? [True]")
-flags.DEFINE_boolean("gpu", False, 'Enable GPU? (Linux only) [False]')
+flags.DEFINE_boolean("use_gpu", False, "Use GPU? [False]")
+flags.DEFINE_integer("num_gpus", 1, "Number of GPUs to use [1]")
 flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
 flags.DEFINE_string("config", -1, "Config file name to load. 'None' to use default config. [None]")
@@ -172,7 +173,8 @@ def main(_):
     graph = tf.Graph()
     model = AttentionModel(graph, config)
     eval_tensors = [model.yp, model.sim.p]
-    with tf.Session(graph=graph) as sess:
+    sess = tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True))
+    with sess:
         sess.run(tf.initialize_all_variables())
         if config.train:
             writer = tf.train.SummaryWriter(config.log_dir, sess.graph_def)

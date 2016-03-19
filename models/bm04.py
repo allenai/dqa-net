@@ -8,6 +8,10 @@ import tensorflow as tf
 from read_data.r04 import DataSet
 from utils import get_pbar
 
+class MultiGPUWrapper(object):
+    def __init__(self, graph, params):
+        self.num_gpus = params.num_gpus
+
 
 class BaseModel(object):
     def __init__(self, graph, params):

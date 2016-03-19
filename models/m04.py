@@ -8,7 +8,7 @@ from tensorflow.python.ops import rnn
 from pprint import pprint
 
 import nn
-from models.base_model_04 import BaseModel
+from models.bm04 import BaseModel
 
 
 class Sentence(object):
