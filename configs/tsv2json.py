@@ -3,6 +3,8 @@ import csv
 import json
 from collections import OrderedDict
 
+from utils import json_pretty_dump
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -13,7 +15,7 @@ def get_args():
 
 def tsv2json(tsv_path, json_path):
     d = tsv2dict(tsv_path)
-    json.dump(d, open(json_path, 'w'))
+    json_pretty_dump(d, open(json_path, 'w'))
 
 
 def tsv2dict(tsv_path):
