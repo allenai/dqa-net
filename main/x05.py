@@ -172,7 +172,7 @@ def main(_):
 
     graph = tf.Graph()
     model = AttentionModel(graph, config)
-    eval_tensors = [model.yp, model.sim.p]
+    eval_tensors = []  # empty for now, because eval feature is not yet implemented
     sess = tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True))
     with sess:
         sess.run(tf.initialize_all_variables())

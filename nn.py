@@ -1,3 +1,6 @@
+"""
+useful neural net modules
+"""
 import operator
 from operator import mul
 from functools import reduce
@@ -37,7 +40,6 @@ def softmax_with_base(shape, base_untiled, x, mask=None, name='sig'):
     return sig, p
 
 
-
 class DotDiffSim(object):
     def __init__(self, shape, name='dot_sum'):
         with tf.variable_scope(name):
@@ -70,6 +72,7 @@ def man_sim(shape, u, v, name='man_sim'):
     dist = tf.reduce_sum(tf.abs(u - v), len(shape)-1)
     sim = tf.sub(0.0, dist, name=name)
     return sim
+
 
 def linear(shape, output_dim, input_, name="linear"):
     a = shape[-1]
