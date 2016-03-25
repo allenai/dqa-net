@@ -18,8 +18,6 @@ def tsv2json(tsv_path, json_path):
     json_pretty_dump(d, open(json_path, 'w'))
 
 
-
-
 def tsv2dict(tsv_path):
     def bool(string):
         """
