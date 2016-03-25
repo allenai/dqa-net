@@ -57,7 +57,7 @@ class BaseRunner(object):
                 grads_tensor = opt.compute_gradients(loss_tensor)
                 grads_tensors.append(grads_tensor)
 
-        loss_tensor = tf.reduce_mean(tf.concat(0, loss_tensors), name='loss')
+        loss_tensor = tf.reduce_mean(tf.pack(loss_tensors), 0, name='loss')
         self.tensors['loss'] = loss_tensor
 
         correct_tensor = tf.concat(0, correct_tensors, name="correct")
