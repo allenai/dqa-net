@@ -16,8 +16,13 @@ def json2tsv(json_path, tsv_path):
     type_dict = OrderedDict([('id', 'str')])
     for id_, config in configs.items():
         for key, val in config.items():
+            if val is None:
+                if key not in type_dict:
+                    type_dict[key] = None
+                continue
+
             type_name = type(val).__name__
-            if key in type_dict:
+            if key in type_dict and type_dict[key] is not None:
                 assert type_dict[key] == type_name, "inconsistent param type: %s" % key
             else:
                 type_dict[key] = type_name

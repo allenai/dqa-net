@@ -1,4 +1,4 @@
-id	batch_size	hidden_size	num_layers	rnn_num_layers	init_mean	init_std	init_lr	init_nw	anneal_period	anneal_ratio	num_epochs	linear_start	max_grad_norm	keep_prob	val_period	save_period	fold_path	data_dir	model_name	mode	use_null	opt	model	lstm	sim_func	emb_num_layers	val_num_batches
-str	int	int	int	int	int	float	float	float	int	float	int	bool	int	float	int	int	str	str	str	str	bool	str	str	str	str	int	int
-local	10	10	1	1	0	0.1	0.01	0.9	10	0.7	2	False	40	1.0	1	1	data/s3-100/fold.json	data/s3-100	m04	la	False	adagrad	sim	basic	dot	None	None
-debug	100	100	1	1	0	0.1	0.01	None	100	0.5	100	False	40	1.0	None	None	data/s3/folds/fold11.json	data/s3_04_debug	m04	la	None	None	None	None	None	1	100
+id	anneal_period	anneal_ratio	batch_size	data_dir	device_type	emb_num_layers	fold_path	hidden_size	init_lr	init_mean	init_nw	init_std	keep_prob	linear_start	lstm	max_grad_norm	mode	model	model_name	num_devices	num_epochs	num_layers	opt	rnn_num_layers	save_period	sim_func	use_null	val_num_batches	val_period
+str	int	float	int	str	str	int	str	int	float	int	float	float	float	bool	str	int	str	str	str	int	int	int	str	int	int	str	bool	int	int
+debug	100	0.5	100	data/s3_04_debug	gpu	1	data/s3/folds/fold11.json	100	0.01	0	None	0.1	1.0	True	None	40	la	None	m04	2	100	1	None	1	None	None	None	100	None
+local	10	0.7	10	data/s3-100	None	None	data/s3-100/fold.json	10	0.01	0	0.9	0.1	1.0	True	basic	40	la	sim	m04	None	2	1	adagrad	1	1	dot	True	None	1
