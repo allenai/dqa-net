@@ -18,7 +18,20 @@ def tsv2json(tsv_path, json_path):
     json_pretty_dump(d, open(json_path, 'w'))
 
 
+
+
 def tsv2dict(tsv_path):
+    def bool(string):
+        """
+        shadows original bool, which maps 'False' to True
+        """
+        if string == 'True':
+            return True
+        elif string == 'False':
+            return False
+        else:
+            raise Exception("Cannot convert %s to bool" % string)
+
     with open(tsv_path, 'r', newline='') as file:
         reader = csv.reader(file, delimiter='\t')
         fields = next(reader)
