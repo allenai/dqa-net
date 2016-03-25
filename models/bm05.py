@@ -10,7 +10,7 @@ from tf_utils import average_gradients
 from utils import get_pbar
 
 
-class Runner(object):
+class BaseRunner(object):
     def __init__(self, params, sess, towers):
         assert isinstance(sess, tf.Session)
         self.sess = sess
@@ -26,7 +26,7 @@ class Runner(object):
         params = self.params
         sess = self.sess
         moving_average_decay = params.moving_average_decay
-        device_name = params.device_name
+        device_type = params.device_type
         summaries = []
 
         global_step = tf.get_variable('global_step', shape=[], dtype='int32',
@@ -46,8 +46,9 @@ class Runner(object):
         grads_tensors = []
         correct_tensors = []
         for device_id, tower in enumerate(self.towers):
-            with tf.device("/%s:%d" %(device_name, device_id)), tf.name_scope("gpu:%d" % device_id):
+            with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("gpu:%d" % device_id):
                 tower.initialize()
+                tf.get_variable_scope().reuse_variables()
                 loss_tensor = tower.get_loss_tensor()
                 correct_tensor = tower.get_correct_tensor()
                 grads_tensor = opt.compute_gradients(loss_tensor)
@@ -228,7 +229,7 @@ class Runner(object):
         print("loading done.")
 
 
-class Tower(object):
+class BaseTower(object):
     def __init__(self, params):
         self.params = params
         self.placeholders = {}

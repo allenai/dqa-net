@@ -8,7 +8,7 @@ from tensorflow.python.ops import rnn
 from pprint import pprint
 
 import nn
-from models.bm04 import BaseModel
+from models.bm05 import BaseTower, BaseRunner
 
 
 class Sentence(object):
@@ -230,33 +230,39 @@ class Layer(object):
         self.output_encoder = output_encoder
 
 
-class AttentionModel(BaseModel):
-    def _build_tower(self):
+class AttentionTower(BaseTower):
+    def initialize(self):
         params = self.params
+        tensors = self.tensors
+        placeholders = self.placeholders
+
         V, d, G = params.vocab_size, params.hidden_size, params.image_size
         N, C, J = params.batch_size, params.num_choices, params.max_sent_size
         e = params.word_size
 
-        summaries = []
-
         # initialize self
         # placeholders
         with tf.name_scope('ph'):
-            self.s = Sentence([N, C, J], 's')
-            self.f = Memory(params, 'f')
-            self.image = tf.placeholder('float', [N, G], name='i')
+            s = Sentence([N, C, J], 's')
+            f = Memory(params, 'f')
+            image = tf.placeholder('float', [N, G], name='i')
             if params.use_null:
-                self.y = tf.placeholder('float', [N, C+1], name='y')
+                y = tf.placeholder('float', [N, C+1], name='y')
             else:
-                self.y = tf.placeholder('int8', [N, C], name='y')
-            self.init_emb_mat = tf.placeholder('float', shape=[V, e], name='init_emb_mat')
+                y = tf.placeholder('int8', [N, C], name='y')
+            init_emb_mat = tf.placeholder('float', shape=[V, e], name='init_emb_mat')
+            placeholders['s'] = s
+            placeholders['f'] = f
+            placeholders['image'] = image
+            placeholders['y'] = y
+            placeholders['init_emb_mat'] = init_emb_mat
 
         with tf.variable_scope('first_u'):
-            u_encoder = LSTMSentenceEncoder(params, self.init_emb_mat)
-            first_u = u_encoder(self.s, name='first_u')
+            u_encoder = LSTMSentenceEncoder(params, init_emb_mat)
+            first_u = u_encoder(s, name='first_u')
         with tf.variable_scope('first_v'):
-            v_encoder = LSTMSentenceEncoder(params, self.init_emb_mat)
-            first_v = v_encoder(self.s, name='first_v')
+            v_encoder = LSTMSentenceEncoder(params, init_emb_mat)
+            first_v = v_encoder(s, name='first_v')
 
 
         layers = []
@@ -264,14 +270,14 @@ class AttentionModel(BaseModel):
         for layer_index in range(params.num_layers):
             with tf.variable_scope('layer_%d' % layer_index):
                 if prev_layer:
-                    cur_layer = Layer(params, self.f, prev_layer=prev_layer)
+                    cur_layer = Layer(params, f, prev_layer=prev_layer)
                 else:
-                    cur_layer = Layer(params, self.f, u=first_u, sent_encoder=u_encoder)
+                    cur_layer = Layer(params, f, u=first_u, sent_encoder=u_encoder)
                 layers.append(cur_layer)
                 prev_layer = cur_layer
         last_layer = layers[-1]
 
-        sim = Sim(params, self.f, u_encoder, first_u)
+        sim = Sim(params, f, u_encoder, first_u)
 
         if params.model == 'sim':
             with tf.variable_scope("sim"):
@@ -281,7 +287,6 @@ class AttentionModel(BaseModel):
                 logit = tf.reduce_sum(first_u * last_layer.o, 2)
         else:
             raise Exception()
-
 
         with tf.variable_scope("merge"):
             # raw_gate_aug = nn.linear([N, C], 1, logit) # [N, 1]
@@ -294,58 +299,41 @@ class AttentionModel(BaseModel):
             sent_logit = tf.squeeze(sent_logit_aug, [2])
             mem_logit = logit
             if params.mode == 'l':
-                self.logit = sent_logit
+                logit = sent_logit
             elif params.mode == 'a':
-                self.logit = mem_logit
+                logit = mem_logit
             elif params.mode == 'la':
-                self.logit = (1 - gate_aug) * mem_logit + gate_aug * sent_logit
+                logit = (1 - gate_aug) * mem_logit + gate_aug * sent_logit
                 # self.logit = sig * memory_logit + (1 - sig) * sent_logit
 
             if params.use_null:
-                self.logit = tf.concat(1, [self.logit, raw_gate_aug], name='logit_concat')
+                logit = tf.concat(1, [logit, raw_gate_aug], name='logit_concat')
+            tensors['logit'] = logit
 
         with tf.variable_scope('yp'):
-            self.yp = tf.nn.softmax(self.logit, name='yp')  # [N, C]
+            yp = tf.nn.softmax(logit, name='yp')  # [N, C]
             if params.use_null:
-                self.yp = tf.concat(1, [self.yp, gate_aug], 'yp_concat')
+                yp = tf.concat(1, [yp, gate_aug], 'yp_concat')
+            tensors['yp'] = yp
 
         with tf.name_scope('loss') as loss_scope:
-            self.cross_entropy = tf.nn.softmax_cross_entropy_with_logits(self.logit, tf.cast(self.y, 'float'), name='cross_entropy')
-            self.avg_cross_entropy = tf.reduce_mean(self.cross_entropy, 0, name='avg_cross_entropy')
-            tf.add_to_collection('losses', self.avg_cross_entropy)
-            self.total_loss = tf.add_n(tf.get_collection('losses'), name='total_loss')
-            self.losses = tf.get_collection('losses', loss_scope)
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logit, tf.cast(y, 'float'), name='cross_entropy')
+            avg_cross_entropy = tf.reduce_mean(cross_entropy, 0, name='avg_cross_entropy')
+            tf.add_to_collection('losses', avg_cross_entropy)
+            loss = tf.add_n(tf.get_collection('losses'), name='loss')
+            tensors['cross_entropy'] = cross_entropy
+            tensors['loss'] = loss
 
         with tf.name_scope('acc'):
-            self.correct_vec = tf.equal(tf.argmax(self.yp, 1), tf.argmax(self.y, 1))
-            self.num_corrects = tf.reduce_sum(tf.cast(self.correct_vec, 'float'), name='num_corrects')
-            self.acc = tf.reduce_mean(tf.cast(self.correct_vec, 'float'), name='acc')
-
-        with tf.name_scope('opt'):
-            if params.opt == 'basic':
-                opt = tf.train.GradientDescentOptimizer(self.learning_rate)
-            elif params.opt == 'adagrad':
-                opt = tf.train.AdagradOptimizer(self.learning_rate)
-            else:
-                raise Exception()
-            # FIXME : This must muse cross_entropy for some reason!
-            grads_and_vars = opt.compute_gradients(self.cross_entropy)
-            # grads_and_vars = [(tf.clip_by_norm(grad, params.max_grad_norm), var) if grad is not None and var is not None else (grad, var) for grad, var in grads_and_vars]
-            self.opt_op = opt.apply_gradients(grads_and_vars, global_step=self.global_step)
-
-        # summaries
-        summaries.append(tf.histogram_summary(first_u.op.name, first_u))
-        summaries.append(tf.histogram_summary(last_layer.f.op.name, last_layer.f))
-        summaries.append(tf.histogram_summary(last_layer.u.op.name, last_layer.u))
-        summaries.append(tf.histogram_summary(last_layer.o.op.name, last_layer.o))
-        summaries.append(tf.histogram_summary(last_layer.p.op.name, last_layer.p))
-        summaries.append(tf.scalar_summary(gate_avg.op.name, gate_avg))
-        summaries.append(tf.scalar_summary("%s (raw)" % self.total_loss.op.name, self.total_loss))
-        self.merged_summary = tf.merge_summary(summaries)
-        self.last_layer = last_layer
-        self.sim = sim
+            correct_vec = tf.equal(tf.argmax(yp, 1), tf.argmax(y, 1))
+            num_corrects = tf.reduce_sum(tf.cast(correct_vec, 'float'), name='num_corrects')
+            acc = tf.reduce_mean(tf.cast(correct_vec, 'float'), name='acc')
+            tensors['correct'] = correct_vec
+            tensors['num_corrects'] = num_corrects
+            tensors['acc'] = acc
 
     def _get_feed_dict(self, batch, mode, **kwargs):
+        placeholders = self.placeholders
         sents_batch, facts_batch, images_batch = batch[:-1]
         if len(batch) > 3:
             label_batch = batch[-1]
@@ -354,42 +342,18 @@ class AttentionModel(BaseModel):
         s = self._prepro_sents_batch(sents_batch)  # [N, C, J], [N, C]
         f = self._prepro_facts_batch(facts_batch)
         g = self._prepro_images_batch(images_batch)
-        feed_dict = {self.image: g, self.init_emb_mat: self.params.init_emb_mat}
+        feed_dict = {placeholders['image']: g, placeholders['init_emb_mat']: self.params.init_emb_mat}
         if mode == 'train':
-            learning_rate = kwargs['learning_rate']
             null_weight = kwargs['null_weight']
-            feed_dict[self.learning_rate] = learning_rate
             y_batch = self._prepro_label_batch(label_batch, null_weight=null_weight)
         elif mode == 'eval':
             y_batch = self._prepro_label_batch(label_batch)
         else:
             raise Exception()
-        feed_dict[self.y] = y_batch
-        self.s.add(feed_dict, *s)
-        self.f.add(feed_dict, *f)
+        feed_dict[placeholders['y']] = y_batch
+        placeholders['s'].add(feed_dict, *s)
+        placeholders['f'].add(feed_dict, *f)
         return feed_dict
-
-    def _get_train_args(self, epoch_idx):
-        params = self.params
-        learning_rate = params.init_lr
-        null_weight = params.init_nw
-
-        anneal_period = params.anneal_period
-        anneal_ratio = params.anneal_ratio
-        num_periods = int(epoch_idx / anneal_period)
-        factor = anneal_ratio ** num_periods
-
-        if params.use_null:
-            nw_period = params.nw_period
-            nw_ratio = params.nw_ratio
-            nw_num_periods = int(epoch_idx / nw_period)
-            nw_factor = nw_ratio ** nw_num_periods
-            null_weight *= nw_factor
-        if params.opt == 'basic':
-            learning_rate *= factor
-
-        train_args = {'null_weight': null_weight, 'learning_rate': learning_rate}
-        return train_args
 
     def _prepro_images_batch(self, images_batch):
         params = self.params
@@ -448,3 +412,27 @@ class AttentionModel(BaseModel):
                 y[i, C] = null_weight
 
         return y
+
+
+class AttentionRunner(BaseRunner):
+    def _get_train_args(self, epoch_idx):
+        params = self.params
+        learning_rate = params.init_lr
+        null_weight = params.init_nw
+
+        anneal_period = params.anneal_period
+        anneal_ratio = params.anneal_ratio
+        num_periods = int(epoch_idx / anneal_period)
+        factor = anneal_ratio ** num_periods
+
+        if params.use_null:
+            nw_period = params.nw_period
+            nw_ratio = params.nw_ratio
+            nw_num_periods = int(epoch_idx / nw_period)
+            nw_factor = nw_ratio ** nw_num_periods
+            null_weight *= nw_factor
+        if params.opt == 'basic':
+            learning_rate *= factor
+
+        train_args = {'null_weight': null_weight, 'learning_rate': learning_rate}
+        return train_args

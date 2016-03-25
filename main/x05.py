@@ -7,7 +7,7 @@ import h5py
 import tensorflow as tf
 
 from configs.get_config import get_config_from_file, get_config
-from models.m04 import AttentionModel
+from models.m05 import AttentionTower, AttentionRunner
 from read_data.r04 import read_data
 
 flags = tf.app.flags
@@ -53,8 +53,8 @@ flags.DEFINE_integer("train_num_batches", -1, "Train num batches. -1 for max pos
 flags.DEFINE_integer("test_num_batches", -1, "Test num batches. -1 for max possible [-1]")
 flags.DEFINE_boolean("load", False, "Load from saved model? [False]")
 flags.DEFINE_boolean("progress", True, "Show progress? [True]")
-flags.DEFINE_boolean("use_gpu", False, "Use GPU? [False]")
-flags.DEFINE_integer("num_gpus", 1, "Number of GPUs to use [1]")
+flags.DEFINE_boolean("device_type", 'cpu', "cpu | gpu [cpu]")
+flags.DEFINE_integer("num_devices", 1, "Number of devices to use [1]")
 flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
 flags.DEFINE_string("config", -1, "Config file name to load. 'None' to use default config. [None]")
@@ -170,20 +170,22 @@ def main(_):
 
     pprint(config.__dict__)
 
-    graph = tf.Graph()
-    model = AttentionModel(graph, config)
     eval_tensors = []  # empty for now, because eval feature is not yet implemented
+
+    graph = tf.Graph()
+    towers = [AttentionTower(config) for _ in range(config.num_devices)]
     sess = tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True))
-    with sess:
-        sess.run(tf.initialize_all_variables())
+    runner = AttentionRunner(config, sess, towers)
+    with graph.as_default():
+        runner.initialize()
         if config.train:
-            writer = tf.train.SummaryWriter(config.log_dir, sess.graph_def)
             if config.load:
-                model.load(sess)
-            model.train(sess, writer, train_ds, val_ds, eval_tensors=eval_tensors)
+                runner.load()
+            runner.train(train_ds, val_ds, eval_tensors=eval_tensors)
         else:
-            model.load(sess)
-            model.eval(sess, test_ds, eval_tensors=eval_tensors)
+            runner.load()
+            runner.eval(test_ds, eval_tensors=eval_tensors)
+
 
 if __name__ == "__main__":
     tf.app.run()
