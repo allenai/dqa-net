@@ -135,6 +135,7 @@ class BaseRunner(object):
         epoch_op = self.tensors['epoch']
         epoch = sess.run(epoch_op)
         print("training %d epochs ... " % num_epochs)
+        print("num iters per epoch: %d" % num_iters_per_epoch)
         print("starting from epoch %d." % (epoch+1))
         while epoch < num_epochs:
             train_args = self._get_train_args(epoch)

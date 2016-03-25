@@ -252,7 +252,7 @@ def prepro_annos(args):
         id_map = _get_id_map(anno)
         text_facts = [rel2text(id_map, rel) for rel in rels]
         text_facts = list(set(_tokenize(fact) for fact in text_facts if fact is not None))
-        max_fact_size = max(max_fact_size, max(len(fact) for fact in text_facts))
+        max_fact_size = max([max_fact_size] + [len(fact) for fact in text_facts])
         # For debugging only
         if args.debug == 'True':
             if image_id in sentss_dict:
