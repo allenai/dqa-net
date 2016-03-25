@@ -201,7 +201,8 @@ class Layer(object):
 
         f = input_encoder(memory, name='f')  # [N, R, d]
         c = f  # output_encoder(memory)  # [N, R, d]
-        u = tf.identity(u or prev_layer.u + prev_layer.o, name="u")  # [N, C, d]
+        if u is None:
+            u = tf.identity(prev_layer.u + prev_layer.o, name="u")  # [N, C, d]
 
         with tf.name_scope('p'):
             f_aug = tf.expand_dims(f, 1)  # [N, 1, R, d]
@@ -332,7 +333,7 @@ class AttentionTower(BaseTower):
             tensors['num_corrects'] = num_corrects
             tensors['acc'] = acc
 
-    def _get_feed_dict(self, batch, mode, **kwargs):
+    def get_feed_dict(self, batch, mode, **kwargs):
         placeholders = self.placeholders
         sents_batch, facts_batch, images_batch = batch[:-1]
         if len(batch) > 3:

@@ -53,7 +53,7 @@ flags.DEFINE_integer("train_num_batches", -1, "Train num batches. -1 for max pos
 flags.DEFINE_integer("test_num_batches", -1, "Test num batches. -1 for max possible [-1]")
 flags.DEFINE_boolean("load", False, "Load from saved model? [False]")
 flags.DEFINE_boolean("progress", True, "Show progress? [True]")
-flags.DEFINE_boolean("device_type", 'cpu', "cpu | gpu [cpu]")
+flags.DEFINE_string("device_type", 'cpu', "cpu | gpu [cpu]")
 flags.DEFINE_integer("num_devices", 1, "Number of devices to use [1]")
 flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
@@ -62,6 +62,7 @@ flags.DEFINE_string("config_ext", ".tsv", "Config file extension [.tsv]")
 flags.DEFINE_string("mode", "la", "l | la [la]")
 flags.DEFINE_boolean("dot_diff_sim", False, "use DotDiffSim? [False]")
 flags.DEFINE_string("model", "sim", "sim | att [sim]")
+flags.DEFINE_float("moving_average_decay", 0.9999, "Moving average deay [0.9999]")
 
 # Debugging
 flags.DEFINE_boolean("draft", False, "Draft? (quick initialize) [False]")

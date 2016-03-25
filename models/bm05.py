@@ -45,29 +45,34 @@ class BaseRunner(object):
 
         grads_tensors = []
         correct_tensors = []
+        loss_tensors = []
         for device_id, tower in enumerate(self.towers):
-            with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("gpu:%d" % device_id):
+            with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("%s_%d" % (device_type, device_id)):
                 tower.initialize()
                 tf.get_variable_scope().reuse_variables()
                 loss_tensor = tower.get_loss_tensor()
+                loss_tensors.append(loss_tensor)
                 correct_tensor = tower.get_correct_tensor()
+                correct_tensors.append(correct_tensor)
                 grads_tensor = opt.compute_gradients(loss_tensor)
                 grads_tensors.append(grads_tensor)
-                correct_tensors.append(correct_tensor)
+
+        loss_tensor = tf.reduce_mean(tf.concat(0, loss_tensors), name='loss')
+        self.tensors['loss'] = loss_tensor
 
         correct_tensor = tf.concat(0, correct_tensors, name="correct")
         self.tensors['correct'] = correct_tensor
 
         grads_tensor = average_gradients(grads_tensors)
         for grad, var in grads_tensor:
-            if grad:
+            if grad is not None:
                 summaries.append(tf.histogram_summary(var.op.name+'/gradients', grad))
         self.tensors['grads'] = grads_tensor
 
         for var in tf.trainable_variables():
             summaries.append(tf.histogram_summary(var.op.name, var))
 
-        apply_grads_op = opt.apply_gradients(grads_tensors, global_step=global_step)
+        apply_grads_op = opt.apply_gradients(grads_tensor, global_step=global_step)
 
         # Moving average op
         var_averages = tf.train.ExponentialMovingAverage(moving_average_decay, global_step)
@@ -85,29 +90,29 @@ class BaseRunner(object):
         init_op = tf.initialize_all_variables()
         sess.run(init_op)
 
+    def _get_feed_dict(self, batches, mode, **kwargs):
+        placeholders = self.placeholders
+        learning_rate_ph = placeholders['learning_rate']
+        learning_rate = kwargs['learning_rate'] if mode == 'train' else 0.0
+        feed_dict = {learning_rate_ph: learning_rate}
+        for batch, tower in zip(batches, self.towers):
+            cur_feed_dict = tower.get_feed_dict(batch, mode, **kwargs)
+            feed_dict.update(cur_feed_dict)
+        return feed_dict
+
     def _train_batches(self, batches, **kwargs):
         sess = self.sess
         tensors = self.tensors
-        train_op = tensors['train']
-        summary_op = tensors['summary']
-        global_step_op = tensors['global_step']
-        feed_dict = {}
-        for batch, tower in zip(batches, self.towers):
-            cur_feed_dict = tower.get_feed_dict(batch, 'train', **kwargs)
-            feed_dict.update(cur_feed_dict)
-
-        ops = [train_op, summary_op, global_step_op]
-        return sess.run(ops, feed_dict=feed_dict)
+        feed_dict = self._get_feed_dict(batches, 'train', **kwargs)
+        ops = [tensors[name] for name in ['train', 'summary', 'global_step']]
+        train, summary, global_step = sess.run(ops, feed_dict=feed_dict)
+        return train, summary, global_step
 
     def _eval_batches(self, batches, eval_tensors=()):
         sess = self.sess
         tensors = self.tensors
         num_examples = sum(len(batch[0]) for batch in batches)
-        feed_dict = {}
-        for device_id, tower in enumerate(self.towers):
-            batch = batches[device_id] if device_id < len(batches) else None
-            cur_feed_dict = tower.get_feed_dict(batch, 'eval')  # None will output dummy feed
-            feed_dict.update(cur_feed_dict)
+        feed_dict = self._get_feed_dict(batches, 'eval')
         ops = [tensors[name] for name in ['correct', 'loss', 'summary', 'global_step']]
         correct, loss, summary, global_step = sess.run(ops, feed_dict=feed_dict)
         num_corrects = np.sum(correct[:num_examples])
