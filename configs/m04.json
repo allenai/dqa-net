@@ -57,7 +57,7 @@
     "rnn_num_layers": 1,
     "save_period": 1,
     "sim_func": "dot",
-    "use_null": true,
+    "use_null": false,
     "val_num_batches": null,
     "val_period": 1
   }

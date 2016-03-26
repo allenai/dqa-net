@@ -58,12 +58,12 @@ class BaseRunner(object):
                 grads_tensors.append(grads_tensor)
 
         loss_tensor = tf.reduce_mean(tf.pack(loss_tensors), 0, name='loss')
-        self.tensors['loss'] = loss_tensor
-
         correct_tensor = tf.concat(0, correct_tensors, name="correct")
+        grads_tensor = average_gradients(grads_tensors)
+
+        self.tensors['loss'] = loss_tensor
         self.tensors['correct'] = correct_tensor
 
-        grads_tensor = average_gradients(grads_tensors)
         for grad, var in grads_tensor:
             if grad is not None:
                 summaries.append(tf.histogram_summary(var.op.name+'/gradients', grad))
