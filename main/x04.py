@@ -173,7 +173,7 @@ def main(_):
     graph = tf.Graph()
     model = AttentionModel(graph, config)
     eval_tensors = [model.yp, model.sim.p]
-    sess = tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True))
+    sess = tf.Session(graph=graph)
     with sess:
         sess.run(tf.initialize_all_variables())
         if config.train:
