@@ -30,6 +30,9 @@ def tsv2dict(tsv_path):
         else:
             raise Exception("Cannot convert %s to bool" % string)
 
+    def none(val):
+        return val
+
     with open(tsv_path, 'r', newline='') as file:
         reader = csv.reader(file, delimiter='\t')
         fields = next(reader)

@@ -18,11 +18,11 @@ def json2tsv(json_path, tsv_path):
         for key, val in config.items():
             if val is None:
                 if key not in type_dict:
-                    type_dict[key] = None
+                    type_dict[key] = 'none'
                 continue
 
             type_name = type(val).__name__
-            if key in type_dict and type_dict[key] is not None:
+            if key in type_dict and type_dict[key] != 'none':
                 assert type_dict[key] == type_name, "inconsistent param type: %s" % key
             else:
                 type_dict[key] = type_name
