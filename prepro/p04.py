@@ -23,6 +23,7 @@ def get_args():
     parser.add_argument("--vgg_proto_path", default="~/caffe-models/vgg-19.prototxt")
     parser.add_argument("--debug", default='False')
     parser.add_argument("--qa2hypo", default='False')
+    parser.add_argument("--prepro_images", default='False')
     return parser.parse_args()
 
 
@@ -456,6 +457,9 @@ def create_image_ids_and_paths(args):
 
 
 def prepro_images(args):
+    if args.prepro_images == 'False':
+        print("Skipping image preprocessing.")
+        return
     model_path = args.vgg_model_path
     proto_path = args.vgg_proto_path
     out_path = os.path.join(args.target_dir, "images.h5")
@@ -481,4 +485,4 @@ if __name__ == "__main__":
     prepro_annos(ARGS)
     build_vocab(ARGS)
     indexing(ARGS)
-    # prepro_images(ARGS)
+    prepro_images(ARGS)
