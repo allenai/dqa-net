@@ -72,7 +72,8 @@ class PESentenceEncoder(object):
         _l = [g(j) for j in range(J)]
         self.l = tf.constant(_l, shape=[J, d], name='l')
         assert isinstance(sentence, Sentence)
-        Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x, name='Ax')
+        with tf.device("/cpu:0"):
+            Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x, name='Ax')
         # TODO : dimension transformation
         lAx = self.l * Ax
         lAx_masked = lAx * tf.expand_dims(sentence.x_mask, -1)
@@ -136,7 +137,8 @@ class LSTMSentenceEncoder(object):
             params = self.params
             d, L, e = params.hidden_size, params.rnn_num_layers, params.word_size
             J = sentence.shape[-1]
-            Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
+            with tf.device("/cpu:0"):
+                Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
             # Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
 
             prev_size = e
