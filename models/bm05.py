@@ -174,7 +174,8 @@ class BaseRunner(object):
         eval_values = []
         idxs = []
         losses = []
-        string = "eval on %s, N=%d|" % (data_set.name, data_set.batch_size * num_batches)
+        N = data_set.batch_size * num_batches if N <= data_set.num_examples else data_set.num_examples
+        string = "eval on %s, N=%d|" % (data_set.name, N)
         pbar = get_pbar(num_iters, prefix=string).start()
         for iter_idx in range(num_iters):
             batches = [data_set.get_next_labeled_batch() for _ in range(self.num_towers) if data_set.has_next_batch()]

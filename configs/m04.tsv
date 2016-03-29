@@ -1,4 +1,4 @@
 id	anneal_period	anneal_ratio	batch_size	data_dir	device_type	emb_num_layers	fold_path	hidden_size	init_lr	init_mean	init_nw	init_std	keep_prob	linear_start	lstm	max_grad_norm	mode	model	model_name	num_devices	num_epochs	num_layers	opt	rnn_num_layers	save_period	sim_func	use_null	val_num_batches	val_period
-str	int	float	int	str	str	int	str	int	float	int	float	float	float	bool	str	int	str	str	str	int	int	int	str	int	int	str	bool	int	int
-debug	100	0.5	100	data/s3-debug	gpu	1	data/s3-debug/folds/fold11.json	100	0.01	0	None	0.1	1.0	True	None	40	la	None	m04	1	100	1	None	1	None	None	None	100	None
+str	int	float	int	str	str	int	str	int	float	int	float	float	float	bool	str	int	str	str	str	int	int	int	str	int	int	str	bool	none	int
+debug	100	0.5	100	data/s3-debug	gpu	1	data/s3-debug/folds/fold11.json	100	0.01	0	None	0.1	1.0	True	None	40	la	None	m04	1	100	1	None	1	None	None	None	None	None
 local	10	0.7	10	data/s3-100	None	1	data/s3-100/fold.json	10	0.01	0	0.9	0.1	1.0	True	basic	40	la	sim	m04	None	2	1	adagrad	1	1	dot	False	None	1

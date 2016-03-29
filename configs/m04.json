@@ -27,7 +27,7 @@
     "save_period": null,
     "sim_func": null,
     "use_null": null,
-    "val_num_batches": 100,
+    "val_num_batches": null,
     "val_period": null
   },
   "local": {
