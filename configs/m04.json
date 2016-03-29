@@ -8,7 +8,7 @@
     "emb_num_layers": 0,
     "fold_path": "data/s3-debug/folds/fold11.json",
     "hidden_size": 100,
-    "init_lr": 0.1,
+    "init_lr": 0.01,
     "init_mean": 0,
     "init_nw": null,
     "init_std": 0.1,

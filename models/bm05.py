@@ -41,8 +41,7 @@ class BaseRunner(object):
         summaries.append(tf.scalar_summary("learning_rate", learning_rate))
         self.placeholders['learning_rate'] = learning_rate
 
-        # opt = tf.train.GradientDescentOptimizer(learning_rate)
-        opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        opt = tf.train.GradientDescentOptimizer(learning_rate)
 
         grads_tensors = []
         correct_tensors = []
@@ -60,7 +59,8 @@ class BaseRunner(object):
 
         loss_tensor = tf.reduce_mean(tf.pack(loss_tensors), 0, name='loss')
         correct_tensor = tf.concat(0, correct_tensors, name="correct")
-        grads_tensor = average_gradients(grads_tensors)
+        # grads_tensor = average_gradients(grads_tensors)
+        grads_tensor = grads_tensors[0]
 
         self.tensors['loss'] = loss_tensor
         self.tensors['correct'] = correct_tensor
