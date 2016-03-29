@@ -72,8 +72,7 @@ class PESentenceEncoder(object):
         _l = [g(j) for j in range(J)]
         self.l = tf.constant(_l, shape=[J, d], name='l')
         assert isinstance(sentence, Sentence)
-        with tf.device("/cpu:0"):
-            Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x, name='Ax')
+        Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x, name='Ax')
         # TODO : dimension transformation
         lAx = self.l * Ax
         lAx_masked = lAx * tf.expand_dims(sentence.x_mask, -1)
@@ -137,8 +136,7 @@ class LSTMSentenceEncoder(object):
             params = self.params
             d, L, e = params.hidden_size, params.rnn_num_layers, params.word_size
             J = sentence.shape[-1]
-            with tf.device("/cpu:0"):
-                Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
+            Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
             # Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
 
             prev_size = e
@@ -173,13 +171,11 @@ class Sim(object):
             uf = tf.reduce_sum(u_tiled * f_aug, 3)
         else:
             raise Exception()
-        with tf.device("/cpu:0"):
-            max_logit = tf.reduce_max(uf, 2)  # [N, C]
+        max_logit = tf.reduce_max(uf, 2)  # [N, C]
         uf_flat = tf.reshape(uf, [N*C, R])
         uf_sm_flat = tf.nn.softmax(uf_flat)
         uf_sm = tf.reshape(uf_sm_flat, [N, C, R])
-        with tf.device("/cpu:0"):
-            var_logit = tf.reduce_max(uf_sm, 2)
+        var_logit = tf.reduce_max(uf_sm, 2)
         if params.max_func == 'max':
             logit = max_logit
         elif params.max_func == 'var':
@@ -263,8 +259,7 @@ class AttentionTower(BaseTower):
                 y = tf.placeholder('float', [N, C+1], name='y')
             else:
                 y = tf.placeholder('int8', [N, C], name='y')
-            with tf.device("/cpu:0"):
-                init_emb_mat = tf.placeholder('float', shape=[V, e], name='init_emb_mat')
+            init_emb_mat = tf.placeholder('float', shape=[V, e], name='init_emb_mat')
             placeholders['s'] = s
             placeholders['f'] = f
             placeholders['image'] = image

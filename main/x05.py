@@ -175,7 +175,7 @@ def main(_):
 
     graph = tf.Graph()
     towers = [AttentionTower(config) for _ in range(config.num_devices)]
-    sess = tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=False))
+    sess = tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True))
     runner = AttentionRunner(config, sess, towers)
     with graph.as_default(), tf.device("/cpu:0"):
         runner.initialize()
