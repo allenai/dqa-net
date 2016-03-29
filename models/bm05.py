@@ -21,6 +21,7 @@ class BaseRunner(object):
         self.tensors = {}
         self.saver = None
         self.writer = None
+        self.default_initializer = tf.random_normal_initializer(params.init_mean, params.init_std)
 
     def initialize(self):
         params = self.params
@@ -46,21 +47,21 @@ class BaseRunner(object):
         grads_tensors = []
         correct_tensors = []
         loss_tensors = []
-        for device_id, tower in enumerate(self.towers):
-            with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("%s_%d" % (device_type, device_id)):
-                tower.initialize()
-                tf.get_variable_scope().reuse_variables()
-                loss_tensor = tower.get_loss_tensor()
-                loss_tensors.append(loss_tensor)
-                correct_tensor = tower.get_correct_tensor()
-                correct_tensors.append(correct_tensor)
-                grads_tensor = opt.compute_gradients(loss_tensor)
-                grads_tensors.append(grads_tensor)
+        with tf.variable_scope("all", initializer=self.default_initializer):
+            for device_id, tower in enumerate(self.towers):
+                with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("%s_%d" % (device_type, device_id)):
+                    tower.initialize()
+                    tf.get_variable_scope().reuse_variables()
+                    loss_tensor = tower.get_loss_tensor()
+                    loss_tensors.append(loss_tensor)
+                    correct_tensor = tower.get_correct_tensor()
+                    correct_tensors.append(correct_tensor)
+                    grads_tensor = opt.compute_gradients(loss_tensor)
+                    grads_tensors.append(grads_tensor)
 
         loss_tensor = tf.reduce_mean(tf.pack(loss_tensors), 0, name='loss')
         correct_tensor = tf.concat(0, correct_tensors, name="correct")
-        # grads_tensor = average_gradients(grads_tensors)
-        grads_tensor = grads_tensors[0]
+        grads_tensor = average_gradients(grads_tensors)
 
         self.tensors['loss'] = loss_tensor
         self.tensors['correct'] = correct_tensor
@@ -246,7 +247,6 @@ class BaseTower(object):
         self.params = params
         self.placeholders = {}
         self.tensors = {}
-        self.default_initializer = tf.random_normal_initializer(params.init_mean, params.init_std)
 
     def initialize(self):
         # Actual building
