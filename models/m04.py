@@ -139,12 +139,15 @@ class LSTMSentenceEncoder(object):
                     prev_size = cur_size
 
             F = reduce(mul, sentence.shape[:-1], 1)
-            init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
+            if init_hidden_state is None:
+                init_hidden_state = self.cell.zero_state(F, tf.float32)
             Ax_flat = tf.reshape(Ax, [F, J, self.input_size])
             x_len_flat = tf.reshape(sentence.x_len, [F])
 
-            Ax_flat_split = [tf.squeeze(x_flat_each, [1]) for x_flat_each in tf.split(1, J, Ax_flat)]
-            o_flat, h_flat = rnn.rnn(self.cell, Ax_flat_split, init_hidden_state, sequence_length=x_len_flat)
+            # Ax_flat_split = [tf.squeeze(x_flat_each, [1]) for x_flat_each in tf.split(1, J, Ax_flat)]
+            # o_flat, h_flat = rnn.rnn(self.cell, Ax_flat_split, init_hidden_state, sequence_length=x_len_flat)
+            o_flat, h_flat = rnn.dynamic_rnn(self.cell, Ax_flat, x_len_flat, initial_state=init_hidden_state)
+
             # tf.get_variable_scope().reuse_variables()
             self.used = True
             return h_flat
@@ -201,7 +204,8 @@ class Layer(object):
 
         f = input_encoder(memory, name='f')  # [N, R, d]
         c = f  # output_encoder(memory)  # [N, R, d]
-        u = tf.identity(u or prev_layer.u + prev_layer.o, name="u")  # [N, C, d]
+        if u is None:
+            u = tf.add(prev_layer.u, prev_layer.o, name="u")  # [N, C, d]
 
         with tf.name_scope('p'):
             f_aug = tf.expand_dims(f, 1)  # [N, 1, R, d]
@@ -336,7 +340,8 @@ class AttentionModel(BaseModel):
         # summaries
         summaries.append(tf.histogram_summary(first_u.op.name, first_u))
         summaries.append(tf.histogram_summary(last_layer.f.op.name, last_layer.f))
-        summaries.append(tf.histogram_summary(last_layer.u.op.name, last_layer.u))
+        if first_u != last_layer.u:
+            summaries.append(tf.histogram_summary(last_layer.u.op.name, last_layer.u))
         summaries.append(tf.histogram_summary(last_layer.o.op.name, last_layer.o))
         summaries.append(tf.histogram_summary(last_layer.p.op.name, last_layer.p))
         summaries.append(tf.scalar_summary(gate_avg.op.name, gate_avg))

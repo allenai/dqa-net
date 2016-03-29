@@ -36,7 +36,7 @@ flags.DEFINE_float("nw_ratio", 0.7, "Null weight anneal ratio [0.7]")
 flags.DEFINE_integer("num_epochs", 50, "Total number of epochs for training [50]")
 flags.DEFINE_boolean("linear_start", False, "Start training with linear model? [False]")
 flags.DEFINE_float("max_grad_norm", 40, "Max grad norm; above this number is clipped [40]")
-flags.DEFINE_float("keep_prob", 1.0, "Keep probability of dropout [0.5]")
+flags.DEFINE_float("keep_prob", 1.0, "Keep probability of dropout [1.0]")
 flags.DEFINE_string("sim_func", 'dot', "Similarity function: man_dist | dot [dot]")
 flags.DEFINE_string("max_func", 'max', "Max function: max | var | combined [max]")
 flags.DEFINE_string("lstm", "basic", "LSTM cell type: regular | basic | GRU [basic]")
@@ -61,7 +61,7 @@ flags.DEFINE_string("config", 'None', "Config file name to load. 'None' to use d
 flags.DEFINE_string("config_ext", ".json", "Config file extension: .json | .tsv [.json]")
 flags.DEFINE_string("mode", "la", "l | la [la]")
 flags.DEFINE_boolean("dot_diff_sim", False, "use DotDiffSim? [False]")
-flags.DEFINE_string("model", "sim", "sim | att [sim]")
+flags.DEFINE_string("model", "att", "sim | att [sim]")
 flags.DEFINE_float("moving_average_decay", 0.9999, "Moving average deay [0.9999]")
 
 # Debugging

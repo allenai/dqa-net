@@ -177,7 +177,7 @@ def main(_):
     with sess:
         sess.run(tf.initialize_all_variables())
         if config.train:
-            writer = tf.train.SummaryWriter(config.log_dir, sess.graph_def)
+            writer = tf.train.SummaryWriter(config.log_dir, sess.graph)
             if config.load:
                 model.load(sess)
             model.train(sess, writer, train_ds, val_ds, eval_tensors=eval_tensors)
