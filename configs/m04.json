@@ -5,7 +5,7 @@
     "batch_size": 100,
     "data_dir": "data/s3-debug",
     "device_type": "gpu",
-    "emb_num_layers": null,
+    "emb_num_layers": 1,
     "fold_path": "data/s3-debug/folds/fold11.json",
     "hidden_size": 100,
     "init_lr": 0.01,
