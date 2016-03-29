@@ -321,6 +321,7 @@ class AttentionTower(BaseTower):
             loss = tf.add_n(tf.get_collection('losses'), name='loss')
             tensors['cross_entropy'] = cross_entropy
             tensors['loss'] = loss
+            tensors['loss'] = cross_entropy
 
         with tf.name_scope('acc'):
             correct_vec = tf.equal(tf.argmax(yp, 1), tf.argmax(y, 1))
