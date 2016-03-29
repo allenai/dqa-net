@@ -20,7 +20,7 @@ class BaseRunner(object):
         self.placeholders = {}
         self.tensors = {}
         self.saver = None
-        self.writer = tf.train.SummaryWriter(params.log_dir, sess.graph_def)
+        self.writer = None
 
     def initialize(self):
         params = self.params
@@ -89,6 +89,7 @@ class BaseRunner(object):
 
         init_op = tf.initialize_all_variables()
         sess.run(init_op)
+        self.writer = tf.train.SummaryWriter(params.log_dir, sess.graph_def)
 
     def _get_feed_dict(self, batches, mode, **kwargs):
         placeholders = self.placeholders
