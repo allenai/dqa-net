@@ -95,7 +95,8 @@ class BaseRunner(object):
         learning_rate_ph = placeholders['learning_rate']
         learning_rate = kwargs['learning_rate'] if mode == 'train' else 0.0
         feed_dict = {learning_rate_ph: learning_rate}
-        for batch, tower in zip(batches, self.towers):
+        for tower_idx, tower in enumerate(self.towers):
+            batch = batches[tower_idx] if tower_idx < len(batches) else None
             cur_feed_dict = tower.get_feed_dict(batch, mode, **kwargs)
             feed_dict.update(cur_feed_dict)
         return feed_dict
@@ -174,7 +175,7 @@ class BaseRunner(object):
         idxs = []
         losses = []
         string = "eval on %s, N=%d|" % (data_set.name, data_set.batch_size * num_batches)
-        pbar = get_pbar(num_batches, prefix=string).start()
+        pbar = get_pbar(num_iters, prefix=string).start()
         for iter_idx in range(num_iters):
             batches = [data_set.get_next_labeled_batch() for _ in range(self.num_towers) if data_set.has_next_batch()]
             (cur_num_corrects, cur_loss, _, global_step), eval_value_batch = \

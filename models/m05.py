@@ -343,11 +343,14 @@ class AttentionTower(BaseTower):
 
     def get_feed_dict(self, batch, mode, **kwargs):
         placeholders = self.placeholders
-        sents_batch, facts_batch, images_batch = batch[:-1]
-        if len(batch) > 3:
-            label_batch = batch[-1]
+        if batch is not None:
+            sents_batch, facts_batch, images_batch = batch[:-1]
+            if len(batch) > 3:
+                label_batch = batch[-1]
+            else:
+                label_batch = np.zeros([len(sents_batch)])
         else:
-            label_batch = np.zeros([len(sents_batch)])
+            sents_batch, facts_batch, images_batch, label_batch = None, None, None, None
         s = self._prepro_sents_batch(sents_batch)  # [N, C, J], [N, C]
         f = self._prepro_facts_batch(facts_batch)
         g = self._prepro_images_batch(images_batch)
@@ -368,6 +371,8 @@ class AttentionTower(BaseTower):
         params = self.params
         N, G = params.batch_size, params.image_size
         g = np.zeros([N, G])
+        if images_batch is None:
+            return g
         g[:len(images_batch)] = images_batch
         return g
 
@@ -377,6 +382,9 @@ class AttentionTower(BaseTower):
         s_batch = np.zeros([N, C, J], dtype='int32')
         s_mask_batch = np.zeros([N, C, J], dtype='float')
         s_len_batch = np.zeros([N, C], dtype='int16')
+        out = s_batch, s_mask_batch, s_len_batch
+        if sents_batch is None:
+            return out
         for n, sents in enumerate(sents_batch):
             for c, sent in enumerate(sents):
                 for j, idx in enumerate(sent):
@@ -384,7 +392,7 @@ class AttentionTower(BaseTower):
                     s_mask_batch[n, c, j] = 1.0
                 s_len_batch[n, c] = len(sent)
 
-        return s_batch, s_mask_batch, s_len_batch
+        return out
 
     def _prepro_facts_batch(self, facts_batch):
         p = self.params
@@ -393,6 +401,9 @@ class AttentionTower(BaseTower):
         s_mask_batch = np.zeros([N, M, K], dtype='float')
         s_len_batch = np.zeros([N, M], dtype='int16')
         m_mask_batch = np.zeros([N, M], dtype='float')
+        out = s_batch, s_mask_batch, s_len_batch, m_mask_batch
+        if facts_batch is None:
+            return out
         for n, sents in enumerate(facts_batch):
             for m, sent in enumerate(sents):
                 for k, idx in enumerate(sent):
@@ -400,8 +411,7 @@ class AttentionTower(BaseTower):
                     s_mask_batch[n, m, k] = 1.0
                 s_len_batch[n, m] = len(sent)
                 m_mask_batch[n, m] = 1.0
-
-        return s_batch, s_mask_batch, s_len_batch, m_mask_batch
+        return out
 
     def _prepro_label_batch(self, label_batch, null_weight=0.0):
         p = self.params
@@ -410,6 +420,8 @@ class AttentionTower(BaseTower):
             y = np.zeros([N, C+1], dtype='float')
         else:
             y = np.zeros([N, C], dtype='float')
+        if label_batch is None:
+            return y
         for i, label in enumerate(label_batch):
             y[i, label] = np.random.rand() * self.params.rand_y
             rand_other = (1.0 - self.params.rand_y)/(C-1)
