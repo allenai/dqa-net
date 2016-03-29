@@ -263,7 +263,8 @@ class AttentionTower(BaseTower):
                 y = tf.placeholder('float', [N, C+1], name='y')
             else:
                 y = tf.placeholder('int8', [N, C], name='y')
-            init_emb_mat = tf.placeholder('float', shape=[V, e], name='init_emb_mat')
+            with tf.device("/cpu:0"):
+                init_emb_mat = tf.placeholder('float', shape=[V, e], name='init_emb_mat')
             placeholders['s'] = s
             placeholders['f'] = f
             placeholders['image'] = image
