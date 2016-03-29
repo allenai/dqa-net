@@ -19,7 +19,7 @@
     "mode": "la",
     "model": null,
     "model_name": "m04",
-    "num_devices": 2,
+    "num_devices": 1,
     "num_epochs": 100,
     "num_layers": 1,
     "opt": null,
