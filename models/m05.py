@@ -170,11 +170,13 @@ class Sim(object):
             uf = tf.reduce_sum(u_tiled * f_aug, 3)
         else:
             raise Exception()
-        max_logit = tf.reduce_max(uf, 2)  # [N, C]
+        with tf.device("/cpu:0"):
+            max_logit = tf.reduce_max(uf, 2)  # [N, C]
         uf_flat = tf.reshape(uf, [N*C, R])
         uf_sm_flat = tf.nn.softmax(uf_flat)
         uf_sm = tf.reshape(uf_sm_flat, [N, C, R])
-        var_logit = tf.reduce_max(uf_sm, 2)
+        with tf.device("/cpu:0"):
+            var_logit = tf.reduce_max(uf_sm, 2)
         if params.max_func == 'max':
             logit = max_logit
         elif params.max_func == 'var':
