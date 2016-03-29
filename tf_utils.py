@@ -61,6 +61,7 @@ def average_gradients(tower_grads):
         grads = []
         for g, _ in grad_and_vars:
             # Add 0 dimension to the gradients to represent the tower.
+            assert g is not None
             expanded_g = tf.expand_dims(g, 0)
 
             # Append on a 'tower' dimension which we will average over below.

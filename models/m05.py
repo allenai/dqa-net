@@ -40,32 +40,38 @@ class Memory(Sentence):
         feed_dict[self.m_mask] = m_mask
 
 
-class SentenceEncoder(object):
+class PESentenceEncoder(object):
     def __init__(self, params, emb_mat):
-        self.V, self.d, self.L, self.e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
+        self.params = params
+        V, d, L, e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
         # self.init_emb_mat = tf.get_variable("init_emb_mat", [self.V, self.d])
-        prev_size = self.e
-        hidden_sizes = [self.d for _ in range(params.emb_num_layers)]
+        emb_hidden_sizes = [d for _ in range(params.emb_num_layers)]
+        prev_size = e
         for layer_idx in range(params.emb_num_layers):
-            with tf.variable_scope("emb_%d" % layer_idx):
-                cur_hidden_size = hidden_sizes[layer_idx]
-                emb_mat = tf.tanh(nn.linear([self.V, prev_size], cur_hidden_size, emb_mat))
-                prev_size = cur_hidden_size
-        self.emb_mat = emb_mat
+            with tf.variable_scope("Ax_%d" % layer_idx):
+                cur_size = emb_hidden_sizes[layer_idx]
+                mat = tf.get_variable("mat_%d" % layer_idx, shape=[prev_size, cur_size])
+                bias = tf.get_variable("bias_%d" % layer_idx, shape=[cur_size])
+                emb_mat = tf.tanh(tf.matmul(emb_mat, mat) + bias)
+        self.emb_mat = emb_mat  # [V, d]
+
 
     def __call__(self, sentence, name='u'):
         assert isinstance(sentence, Sentence)
+        params = self.params
+        d, e = params.hidden_size, params.word_size
         J = sentence.shape[-1]
         def f(JJ, jj, dd, kk):
             return (1-float(jj)/JJ) - (float(kk)/dd)*(1-2.0*jj/JJ)
 
         def g(jj):
-            return [f(J, jj, self.d, k) for k in range(self.d)]
+            return [f(J, jj, d, k) for k in range(d)]
 
         _l = [g(j) for j in range(J)]
-        self.l = tf.constant(_l, shape=[J, self.d], name='l')
+        self.l = tf.constant(_l, shape=[J, d], name='l')
         assert isinstance(sentence, Sentence)
         Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x, name='Ax')
+        # TODO : dimension transformation
         lAx = self.l * Ax
         lAx_masked = lAx * tf.expand_dims(sentence.x_mask, -1)
         m = tf.reduce_sum(lAx_masked, len(sentence.shape) - 1, name=name)
@@ -259,10 +265,12 @@ class AttentionTower(BaseTower):
             placeholders['init_emb_mat'] = init_emb_mat
 
         with tf.variable_scope('first_u'):
-            u_encoder = LSTMSentenceEncoder(params, init_emb_mat)
+            # u_encoder = LSTMSentenceEncoder(params, init_emb_mat)
+            u_encoder = PESentenceEncoder(params, init_emb_mat)
             first_u = u_encoder(s, name='first_u')
         with tf.variable_scope('first_v'):
-            v_encoder = LSTMSentenceEncoder(params, init_emb_mat)
+            # v_encoder = LSTMSentenceEncoder(params, init_emb_mat)
+            v_encoder = PESentenceEncoder(params, init_emb_mat)
             first_v = v_encoder(s, name='first_v')
 
 

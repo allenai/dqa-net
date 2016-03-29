@@ -36,7 +36,7 @@
     "batch_size": 10,
     "data_dir": "data/s3-100",
     "device_type": null,
-    "emb_num_layers": null,
+    "emb_num_layers": 1,
     "fold_path": "data/s3-100/fold.json",
     "hidden_size": 10,
     "init_lr": 0.01,
