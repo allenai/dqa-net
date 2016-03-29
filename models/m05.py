@@ -5,6 +5,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.models.rnn import rnn_cell
 from tensorflow.python.ops import rnn
+import my_rnn_cell
 from pprint import pprint
 
 import nn
@@ -97,8 +98,8 @@ class LSTMSentenceEncoder(object):
         self.input_size = self.emb_hidden_sizes[-1] if self.emb_hidden_sizes else e
 
         if params.lstm == 'basic':
-            self.first_cell = rnn_cell.BasicLSTMCell(d, input_size=self.input_size, forget_bias=params.forget_bias)
-            self.second_cell = rnn_cell.BasicLSTMCell(d, forget_bias=params.forget_bias)
+            self.first_cell = my_rnn_cell.BasicLSTMCell(d, input_size=self.input_size, forget_bias=params.forget_bias)
+            self.second_cell = my_rnn_cell.BasicLSTMCell(d, forget_bias=params.forget_bias)
         elif params.lstm == 'regular':
             self.first_cell = rnn_cell.LSTMCell(d, self.input_size, cell_clip=params.cell_clip)
             self.second_cell = rnn_cell.LSTMCell(d, d, cell_clip=params.cell_clip)
