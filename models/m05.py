@@ -83,15 +83,13 @@ class LSTMSentenceEncoder(object):
     def __init__(self, params, emb_mat):
         self.params = params
         V, d, L, e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
-        """
-        prev_size = self.e
-        hidden_sizes = [self.d for _ in range(params.emb_num_layers)]
+        prev_size = e
+        hidden_sizes = [d for _ in range(params.emb_num_layers)]
         for layer_idx in range(params.emb_num_layers):
             with tf.variable_scope("emb_%d" % layer_idx):
                 cur_hidden_size = hidden_sizes[layer_idx]
-                emb_mat = tf.tanh(nn.linear([self.V, prev_size], cur_hidden_size, emb_mat))
+                emb_mat = tf.tanh(nn.linear([V, prev_size], cur_hidden_size, emb_mat))
                 prev_size = cur_hidden_size
-        """
         self.emb_mat = emb_mat
 
         self.emb_hidden_sizes = [d for _ in range(params.emb_num_layers)]
@@ -131,19 +129,10 @@ class LSTMSentenceEncoder(object):
 
     def get_last_hidden_state(self, sentence, init_hidden_state=None):
         assert isinstance(sentence, Sentence)
+        params = self.params
         with tf.variable_scope(self.scope, reuse=self.used):
-            params = self.params
-            d, L, e = params.hidden_size, params.rnn_num_layers, params.word_size
             J = sentence.shape[-1]
             Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
-            # Ax = tf.nn.l2_normalize(Ax, 3, name='Ax')
-
-            prev_size = e
-            for layer_idx in range(params.emb_num_layers):
-                with tf.variable_scope("Ax_%d" % layer_idx):
-                    cur_size = self.emb_hidden_sizes[layer_idx]
-                    Ax = tf.tanh(nn.linear(sentence.shape + [prev_size], cur_size, Ax), name="Ax_%d" % layer_idx)
-                    prev_size = cur_size
 
             F = reduce(mul, sentence.shape[:-1], 1)
             init_hidden_state = init_hidden_state or self.cell.zero_state(F, tf.float32)
@@ -152,7 +141,6 @@ class LSTMSentenceEncoder(object):
 
             # Ax_flat_split = [tf.squeeze(x_flat_each, [1]) for x_flat_each in tf.split(1, J, Ax_flat)]
             o_flat, h_flat = rnn.dynamic_rnn(self.cell, Ax_flat, x_len_flat, initial_state=init_hidden_state)
-            # tf.get_variable_scope().reuse_variables()
             self.used = True
             return h_flat
 
