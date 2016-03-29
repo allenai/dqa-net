@@ -265,12 +265,12 @@ class AttentionTower(BaseTower):
             placeholders['init_emb_mat'] = init_emb_mat
 
         with tf.variable_scope('first_u'):
-            # u_encoder = LSTMSentenceEncoder(params, init_emb_mat)
-            u_encoder = PESentenceEncoder(params, init_emb_mat)
+            u_encoder = LSTMSentenceEncoder(params, init_emb_mat)
+            # u_encoder = PESentenceEncoder(params, init_emb_mat)
             first_u = u_encoder(s, name='first_u')
         with tf.variable_scope('first_v'):
-            # v_encoder = LSTMSentenceEncoder(params, init_emb_mat)
-            v_encoder = PESentenceEncoder(params, init_emb_mat)
+            v_encoder = LSTMSentenceEncoder(params, init_emb_mat)
+            # v_encoder = PESentenceEncoder(params, init_emb_mat)
             first_v = v_encoder(s, name='first_v')
 
 
