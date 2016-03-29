@@ -166,15 +166,17 @@ class BaseRunner(object):
         epoch_op = self.tensors['epoch']
         eval_names = [os.path.basename(tensor.name) for tensor in eval_tensors]
         if is_val:
-            num_batches = params.val_num_batches if params.val_num_batches >= 0 else data_set.num_batches
+            num_batches = params.val_num_batches if 0 <= params.val_num_batches <= data_set.num_batches else data_set.num_batches
         else:
-            num_batches = params.test_num_batches if params.test_num_batches >= 0 else data_set.num_batches
+            num_batches = params.test_num_batches if 0 <= params.test_num_batches <= data_set.num_batches else data_set.num_batches
         num_iters = int(np.ceil(num_batches / self.num_towers))
         num_corrects, total = 0, 0
         eval_values = []
         idxs = []
         losses = []
-        N = data_set.batch_size * num_batches if N <= data_set.num_examples else data_set.num_examples
+        N = data_set.batch_size * num_batches
+        if N > data_set.num_examples:
+            N = data_set.num_examples
         string = "eval on %s, N=%d|" % (data_set.name, N)
         pbar = get_pbar(num_iters, prefix=string).start()
         for iter_idx in range(num_iters):
