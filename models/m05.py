@@ -6,6 +6,7 @@ import numpy as np
 from tensorflow.models.rnn import rnn_cell
 from tensorflow.python.ops import rnn
 import my_rnn_cell
+import my_rnn
 from pprint import pprint
 
 import nn
@@ -151,7 +152,7 @@ class LSTMSentenceEncoder(object):
             x_len_flat = tf.reshape(sentence.x_len, [F])
 
             Ax_flat_split = [tf.squeeze(x_flat_each, [1]) for x_flat_each in tf.split(1, J, Ax_flat)]
-            o_flat, h_flat = rnn.rnn(self.cell, Ax_flat_split, init_hidden_state, sequence_length=x_len_flat)
+            o_flat, h_flat = my_rnn.rnn(self.cell, Ax_flat_split, init_hidden_state, sequence_length=x_len_flat)
             # tf.get_variable_scope().reuse_variables()
             self.used = True
             return h_flat
