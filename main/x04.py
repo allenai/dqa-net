@@ -37,7 +37,7 @@ flags.DEFINE_integer("num_epochs", 50, "Total number of epochs for training [50]
 flags.DEFINE_boolean("linear_start", False, "Start training with linear model? [False]")
 flags.DEFINE_float("max_grad_norm", 40, "Max grad norm; above this number is clipped [40]")
 flags.DEFINE_float("keep_prob", 1.0, "Keep probability of dropout [0.5]")
-flags.DEFINE_string("sim_func", 'man_dist', "Similarity function: man_dist | dot [man_dist]")
+flags.DEFINE_string("sim_func", 'dot', "Similarity function: man_dist | dot [man_dist]")
 flags.DEFINE_string("max_func", 'max', "Max function: max | var | combined [max]")
 flags.DEFINE_string("lstm", "basic", "LSTM cell type: regular | basic | GRU [regular]")
 flags.DEFINE_float("forget_bias", 2.5, "LSTM forget bias for basic cell [2.5]")
