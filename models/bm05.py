@@ -44,6 +44,7 @@ class BaseRunner(object):
 
         opt = tf.train.GradientDescentOptimizer(learning_rate)
 
+        """
         grads_tensors = []
         correct_tensors = []
         loss_tensors = []
@@ -62,10 +63,18 @@ class BaseRunner(object):
         loss_tensor = tf.reduce_mean(tf.pack(loss_tensors), 0, name='loss')
         correct_tensor = tf.concat(0, correct_tensors, name="correct")
         grads_tensor = average_gradients(grads_tensors)
+        """
+        with tf.variable_scope("all", initializer=self.default_initializer):
+            tower = self.towers[0]
+            tower.initialize()
+            loss_tensor = tower.tensors['avg_cross_entropy']
+            grads_tensor = opt.compute_gradients(tower.get_loss_tensor())
+            correct_tensor = tower.get_correct_tensor()
 
         self.tensors['loss'] = loss_tensor
         self.tensors['correct'] = correct_tensor
 
+        summaries.append(tf.scalar_summary(loss_tensor.op.name, loss_tensor))
         for grad, var in grads_tensor:
             if grad is not None:
                 summaries.append(tf.histogram_summary(var.op.name+'/gradients', grad))
@@ -76,11 +85,7 @@ class BaseRunner(object):
 
         apply_grads_op = opt.apply_gradients(grads_tensor, global_step=global_step)
 
-        # Moving average op
-        var_averages = tf.train.ExponentialMovingAverage(moving_average_decay, global_step)
-        apply_averages_op = var_averages.apply(tf.trainable_variables())
-
-        train_op = tf.group(apply_grads_op, apply_averages_op)
+        train_op = tf.group(apply_grads_op)
         self.tensors['train'] = train_op
 
         saver = tf.train.Saver(tf.all_variables())

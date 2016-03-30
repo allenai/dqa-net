@@ -319,9 +319,8 @@ class AttentionTower(BaseTower):
             avg_cross_entropy = tf.reduce_mean(cross_entropy, 0, name='avg_cross_entropy')
             tf.add_to_collection('losses', avg_cross_entropy)
             loss = tf.add_n(tf.get_collection('losses'), name='loss')
-            tensors['cross_entropy'] = cross_entropy
-            tensors['loss'] = loss
             tensors['loss'] = cross_entropy
+            tensors['avg_cross_entropy'] = avg_cross_entropy
 
         with tf.name_scope('acc'):
             correct_vec = tf.equal(tf.argmax(yp, 1), tf.argmax(y, 1))
@@ -333,14 +332,15 @@ class AttentionTower(BaseTower):
 
     def get_feed_dict(self, batch, mode, **kwargs):
         placeholders = self.placeholders
-        if batch is not None:
+        if batch is None:
+            assert mode != 'train', "Cannot pass empty batch during training, for now."
+            sents_batch, facts_batch, images_batch, label_batch = None, None, None, None
+        else:
             sents_batch, facts_batch, images_batch = batch[:-1]
             if len(batch) > 3:
                 label_batch = batch[-1]
             else:
                 label_batch = np.zeros([len(sents_batch)])
-        else:
-            sents_batch, facts_batch, images_batch, label_batch = None, None, None, None
         s = self._prepro_sents_batch(sents_batch)  # [N, C, J], [N, C]
         f = self._prepro_facts_batch(facts_batch)
         g = self._prepro_images_batch(images_batch)
