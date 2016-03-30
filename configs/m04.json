@@ -25,7 +25,7 @@
     "opt": null,
     "rnn_num_layers": 1,
     "save_period": null,
-    "sim_func": null,
+    "sim_func": "man_dist",
     "use_null": null,
     "val_num_batches": null,
     "val_period": null

@@ -61,7 +61,7 @@ flags.DEFINE_string("config", 'None', "Config file name to load. 'None' to use d
 flags.DEFINE_string("config_ext", ".json", "Config file extension: .json | .tsv [.json]")
 flags.DEFINE_string("mode", "la", "l | la [la]")
 flags.DEFINE_boolean("dot_diff_sim", False, "use DotDiffSim? [False]")
-flags.DEFINE_string("model", "att", "sim | att [sim]")
+flags.DEFINE_string("model", "sim", "sim | att [sim]")
 flags.DEFINE_float("moving_average_decay", 0.9999, "Moving average deay [0.9999]")
 
 # Debugging
