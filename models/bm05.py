@@ -64,7 +64,7 @@ class BaseRunner(object):
         correct_tensor = tf.concat(0, correct_tensors, name="correct")
         grads_tensor = average_gradients(grads_tensors)
         """
-        with tf.variable_scope("all", initializer=self.default_initializer):
+        with tf.variable_scope("all", initializer=self.default_initializer), tf.device("/gpu:0"):
             tower = self.towers[0]
             tower.initialize()
             loss_tensor = tower.tensors['avg_cross_entropy']
