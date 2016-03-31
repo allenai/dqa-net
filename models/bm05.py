@@ -1,12 +1,12 @@
+import itertools
 import json
 import os
 
-import itertools
 import numpy as np
 import tensorflow as tf
 
+from my.tensorflow import average_gradients
 from read_data.r05 import DataSet
-from tf_utils import average_gradients
 from utils import get_pbar
 
 
@@ -40,7 +40,12 @@ class BaseRunner(object):
         summaries.append(tf.scalar_summary("learning_rate", learning_rate))
         self.placeholders['learning_rate'] = learning_rate
 
-        opt = tf.train.GradientDescentOptimizer(learning_rate)
+        if params.opt == 'basic':
+            opt = tf.train.GradientDescentOptimizer(learning_rate)
+        elif params.opt == 'adagrad':
+            opt = tf.train.AdagradOptimizer(learning_rate)
+        else:
+            raise Exception()
 
         grads_tensors = []
         correct_tensors = []
@@ -116,7 +121,6 @@ class BaseRunner(object):
         ops = [tensors[name] for name in ['correct', 'loss', 'summary', 'global_step']]
         correct, loss, summary, global_step = sess.run(ops, feed_dict=feed_dict)
         num_corrects = np.sum(correct[:num_examples])
-        # FIXME : these eval tensors need to be names!
         if len(eval_tensor_names) > 0:
             valuess = [sess.run([tower.tensors[name] for name in eval_tensor_names], feed_dict=feed_dict)
                        for tower in self.towers]
@@ -256,7 +260,7 @@ class BaseTower(object):
     def initialize(self, scope):
         # Actual building
         # Separated so that GPU assignment can be done here.
-        pass
+        raise Exception("Not implemented!")
 
     def get_correct_tensor(self):
         return self.tensors['correct']

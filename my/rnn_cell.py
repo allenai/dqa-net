@@ -15,6 +15,7 @@ def linear(args, output_size, bias, bias_start=0.0, scope=None, var_on_cpu=True)
       bias: boolean, whether to add a bias term or not.
       bias_start: starting value to initialize the bias; 0 by default.
       scope: VariableScope for the created subgraph; defaults to "Linear".
+      var_on_cpu: if True, put the variables on /cpu:0.
 
     Returns:
       A 2D Tensor with shape [batch x output_size] equal to

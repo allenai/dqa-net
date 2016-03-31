@@ -1,15 +1,14 @@
-from operator import mul
 from functools import reduce
+from operator import mul
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 from tensorflow.models.rnn import rnn_cell
 from tensorflow.python.ops import rnn
-import my_rnn_cell
-from pprint import pprint
 
-import nn
 from models.bm05 import BaseTower, BaseRunner
+import my.rnn_cell
+import my.nn
 
 
 class Sentence(object):
@@ -88,7 +87,7 @@ class LSTMSentenceEncoder(object):
         for layer_idx in range(params.emb_num_layers):
             with tf.variable_scope("emb_%d" % layer_idx):
                 cur_hidden_size = hidden_sizes[layer_idx]
-                emb_mat = tf.tanh(nn.linear([V, prev_size], cur_hidden_size, emb_mat))
+                emb_mat = tf.tanh(my.nn.linear([V, prev_size], cur_hidden_size, emb_mat))
                 prev_size = cur_hidden_size
         self.emb_mat = emb_mat
 
@@ -96,8 +95,8 @@ class LSTMSentenceEncoder(object):
         self.input_size = self.emb_hidden_sizes[-1] if self.emb_hidden_sizes else e
 
         if params.lstm == 'basic':
-            self.first_cell = my_rnn_cell.BasicLSTMCell(d, input_size=self.input_size, forget_bias=params.forget_bias)
-            self.second_cell = my_rnn_cell.BasicLSTMCell(d, forget_bias=params.forget_bias)
+            self.first_cell = my.rnn_cell.BasicLSTMCell(d, input_size=self.input_size, forget_bias=params.forget_bias)
+            self.second_cell = my.rnn_cell.BasicLSTMCell(d, forget_bias=params.forget_bias)
         elif params.lstm == 'regular':
             self.first_cell = rnn_cell.LSTMCell(d, self.input_size, cell_clip=params.cell_clip)
             self.second_cell = rnn_cell.LSTMCell(d, d, cell_clip=params.cell_clip)
@@ -152,7 +151,7 @@ class Sim(object):
         u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
         u_tiled = tf.tile(u_aug, [1, 1, R, 1])
         if params.sim_func == 'man_dist':
-            uf = nn.man_sim([N, C, R, d], f_aug, u_tiled, name='uf')  # [N, C, R]
+            uf = my.nn.man_sim([N, C, R, d], f_aug, u_tiled, name='uf')  # [N, C, R]
         elif params.sim_func == 'dot':
             uf = tf.reduce_sum(u_tiled * f_aug, 3)
         else:
@@ -160,7 +159,7 @@ class Sim(object):
         logit = tf.reduce_max(uf, 2)  # [N, C]
 
         f_mask_aug = tf.expand_dims(memory.m_mask, 1)
-        p = nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p')
+        p = my.nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p')
         self.logit = logit
         self.p = p
 

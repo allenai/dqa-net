@@ -13,8 +13,8 @@ from read_data.r05 import read_data
 flags = tf.app.flags
 
 # File directories
+flags.DEFINE_string("model_name", "m05", "Model name. This will be used for save, log, and eval names. [m05]")
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
-flags.DEFINE_string("model_name", "m05", "Model name [m05]")
 flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
 flags.DEFINE_string("fold_path", "data/s3/fold23.json", "fold json path [data/s3/fold23.json]")
 
@@ -159,7 +159,7 @@ def main(_):
 
     pprint(config.__dict__)
 
-    eval_tensors = ['yp', 'p']  # empty for now, because eval feature is not yet implemented
+    eval_tensor_names = ['yp', 'p']
 
     graph = tf.Graph()
     towers = [Tower(config) for _ in range(config.num_devices)]
@@ -170,10 +170,10 @@ def main(_):
         if config.train:
             if config.load:
                 runner.load()
-            runner.train(train_ds, val_ds, eval_tensor_names=eval_tensors)
+            runner.train(train_ds, val_ds, eval_tensor_names=eval_tensor_names)
         else:
             runner.load()
-            runner.eval(test_ds, eval_tensors=eval_tensors)
+            runner.eval(test_ds, eval_tensor_names=eval_tensor_names)
 
 
 if __name__ == "__main__":
