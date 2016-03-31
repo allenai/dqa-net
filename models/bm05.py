@@ -62,6 +62,7 @@ class BaseRunner(object):
 
         self.tensors['loss'] = loss_tensor
         self.tensors['correct'] = correct_tensor
+        summaries.append(tf.scalar_summary(loss_tensor.op.name, loss_tensor))
 
         for grad, var in grads_tensor:
             if grad is not None:
