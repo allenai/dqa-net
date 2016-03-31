@@ -48,5 +48,9 @@
     "sim_func": "dot",
     "val_num_batches": null,
     "val_period": 1
+  },
+  "gpu": {
+    "device_type": "gpu",
+    "num_devices": 4
   }
 }
