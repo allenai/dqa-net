@@ -134,12 +134,13 @@ class BaseRunner(object):
     def train(self, train_data_set, val_data_set=None, eval_tensor_names=()):
         assert isinstance(train_data_set, DataSet)
         assert self.initialized, "Initialize tower before training."
+        # TODO : allow partial batch
 
         sess = self.sess
         writer = self.writer
         params = self.params
         num_epochs = params.num_epochs
-        num_batches = params.train_num_batches if params.train_num_batches >= 0 else train_data_set.num_batches
+        num_batches = params.train_num_batches if params.train_num_batches >= 0 else train_data_set.get_num_batches(partial=False)
         num_iters_per_epoch = int(num_batches / self.num_towers)
         num_digits = int(np.log10(num_batches))
 
@@ -176,10 +177,13 @@ class BaseRunner(object):
         params = self.params
         sess = self.sess
         epoch_op = self.tensors['epoch']
+        dn = data_set.get_num_batches(partial=True)
         if is_val:
-            num_batches = params.val_num_batches if 0 <= params.val_num_batches <= data_set.num_batches else data_set.num_batches
+            pn = params.val_num_batches
+            num_batches = pn if 0 <= pn <= dn else dn
         else:
-            num_batches = params.test_num_batches if 0 <= params.test_num_batches <= data_set.num_batches else data_set.num_batches
+            pn = params.test_num_batches
+            num_batches = pn if 0 <= pn <= dn else dn
         num_iters = int(np.ceil(num_batches / self.num_towers))
         num_corrects, total = 0, 0
         eval_values = []
@@ -193,9 +197,9 @@ class BaseRunner(object):
         for iter_idx in range(num_iters):
             batches = []
             for _ in range(self.num_towers):
-                if data_set.has_next_batch():
-                    idxs.extend(data_set.get_batch_idxs())
-                    batches.append(data_set.get_next_labeled_batch())
+                if data_set.has_next_batch(partial=True):
+                    idxs.extend(data_set.get_batch_idxs(partial=True))
+                    batches.append(data_set.get_next_labeled_batch(partial=True))
             (cur_num_corrects, cur_loss, _, global_step), eval_value_batches = \
                 self._eval_batches(batches, eval_tensor_names=eval_tensor_names)
             num_corrects += cur_num_corrects

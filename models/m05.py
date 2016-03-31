@@ -31,12 +31,12 @@ class Memory(Sentence):
     def __init__(self, params, name='memory'):
         N, M, K = params.batch_size, params.max_num_facts, params.max_fact_size
         shape = [N, M, K]
-        super().__init__(shape, name=name)
+        super(Memory, self).__init__(shape, name=name)
         self.m_mask = tf.placeholder('float', [N, M], name='m_mask')
 
     def add(self, feed_dict, *batch):
         x, x_mask, x_len, m_mask = batch
-        super().add(feed_dict, x, x_mask, x_len)
+        super(Memory, self).add(feed_dict, x, x_mask, x_len)
         feed_dict[self.m_mask] = m_mask
 
 

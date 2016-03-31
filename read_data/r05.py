@@ -10,35 +10,38 @@ from configs.get_config import Config
 
 
 class DataSet(object):
-    def __init__(self, name, batch_size, data, idxs, idx2id, include_leftover=False):
+    def __init__(self, name, batch_size, data, idxs, idx2id):
         self.name = name
         self.num_epochs_completed = 0
         self.idx_in_epoch = 0
         self.batch_size = batch_size
         self.data = data
-        self.include_leftover = include_leftover
         self.idxs = idxs
         self.idx2id = idx2id
         self.num_examples = len(idxs)
-        self.num_batches = int(self.num_examples / self.batch_size) + int(self.num_examples % self.batch_size > 0 and self.include_leftover)
+        self.num_full_batches = int(self.num_examples / self.batch_size)
+        self.num_all_batches = self.num_full_batches + int(self.num_examples % self.batch_size > 0)
         self.reset()
 
-    def get_batch_idxs(self):
-        assert self.has_next_batch(), "End of data, reset required."
+    def get_num_batches(self, partial=False):
+        return self.num_all_batches if partial else self.num_full_batches
+
+    def get_batch_idxs(self, partial=False):
+        assert self.has_next_batch(partial=partial), "End of data, reset required."
         from_, to = self.idx_in_epoch, self.idx_in_epoch + self.batch_size
-        if self.include_leftover and to > self.num_examples:
+        if partial and to > self.num_examples:
             to = self.num_examples
         cur_idxs = self.idxs[from_:to]
         return cur_idxs
 
-    def get_next_labeled_batch(self):
-        cur_idxs = self.get_batch_idxs()
+    def get_next_labeled_batch(self, partial=False):
+        cur_idxs = self.get_batch_idxs(partial=partial)
         batch = [[each[i] for i in cur_idxs] for each in self.data]
         self.idx_in_epoch += len(cur_idxs)
         return batch
 
-    def has_next_batch(self):
-        if self.include_leftover:
+    def has_next_batch(self, partial=False):
+        if partial:
             return self.idx_in_epoch < self.num_examples
         return self.idx_in_epoch + self.batch_size <= self.num_examples
 
@@ -96,8 +99,7 @@ def read_data(params, mode):
 
     data = [sentss, factss, images, answers]
     idxs = np.arange(len(answers))
-    include_leftover = mode != 'train'
-    data_set = DataSet(mode, batch_size, data, idxs, idx2id, include_leftover=include_leftover)
+    data_set = DataSet(mode, batch_size, data, idxs, idx2id)
     print("done")
     return data_set
 
