@@ -13,6 +13,8 @@
     "init_std": 0.1,
     "keep_prob": 1.0,
     "lstm": null,
+    "max_grad_norm": null,
+    "mode": null,
     "model": null,
     "num_devices": 2,
     "num_epochs": 100,
@@ -20,6 +22,32 @@
     "rnn_num_layers": 1,
     "save_period": null,
     "sim_func": "dot",
+    "val_num_batches": null,
+    "val_period": null
+  },
+  "gpu": {
+    "anneal_period": null,
+    "anneal_ratio": null,
+    "batch_size": null,
+    "data_dir": null,
+    "device_type": "gpu",
+    "emb_num_layers": null,
+    "fold_path": null,
+    "hidden_size": null,
+    "init_lr": null,
+    "init_mean": null,
+    "init_std": null,
+    "keep_prob": null,
+    "lstm": null,
+    "max_grad_norm": null,
+    "mode": null,
+    "model": null,
+    "num_devices": 4,
+    "num_epochs": null,
+    "opt": null,
+    "rnn_num_layers": null,
+    "save_period": null,
+    "sim_func": null,
     "val_num_batches": null,
     "val_period": null
   },
@@ -48,9 +76,5 @@
     "sim_func": "dot",
     "val_num_batches": null,
     "val_period": 1
-  },
-  "gpu": {
-    "device_type": "gpu",
-    "num_devices": 4
   }
 }
