@@ -46,8 +46,8 @@ class BaseRunner(object):
         correct_tensors = []
         loss_tensors = []
         for device_id, tower in enumerate(self.towers):
-            with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("%s_%d" % (device_type, device_id)):
-                tower.initialize()
+            with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("%s_%d" % (device_type, device_id)) as scope:
+                tower.initialize(scope)
                 tf.get_variable_scope().reuse_variables()
                 loss_tensor = tower.get_loss_tensor()
                 loss_tensors.append(loss_tensor)
@@ -242,7 +242,7 @@ class BaseTower(object):
         self.tensors = {}
         self.default_initializer = tf.random_normal_initializer(params.init_mean, params.init_std)
 
-    def initialize(self):
+    def initialize(self, scope):
         # Actual building
         # Separated so that GPU assignment can be done here.
         pass

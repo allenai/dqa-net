@@ -166,7 +166,7 @@ class Sim(object):
 
 
 class Tower(BaseTower):
-    def initialize(self):
+    def initialize(self, scope):
         params = self.params
         tensors = self.tensors
         placeholders = self.placeholders
@@ -194,7 +194,7 @@ class Tower(BaseTower):
             # u_encoder = PESentenceEncoder(params, init_emb_mat)
             first_u = u_encoder(s, name='first_u')
 
-        with tf.variable_scope("sim"):
+        with tf.name_scope("sim"):
             sim = Sim(params, f, u_encoder, first_u)
             logit = sim.logit
             tensors['logit'] = logit
@@ -207,9 +207,8 @@ class Tower(BaseTower):
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logit, tf.cast(y, 'float'), name='cross_entropy')
             avg_cross_entropy = tf.reduce_mean(cross_entropy, 0, name='avg_cross_entropy')
             tf.add_to_collection('losses', avg_cross_entropy)
-            loss = tf.add_n(tf.get_collection('losses'), name='loss')
-            tensors['loss'] = cross_entropy
-            tensors['avg_cross_entropy'] = avg_cross_entropy
+            loss = tf.add_n(tf.get_collection('losses', scope), name='loss')
+            tensors['loss'] = loss
 
         with tf.name_scope('acc'):
             correct_vec = tf.equal(tf.argmax(yp, 1), tf.argmax(y, 1))
