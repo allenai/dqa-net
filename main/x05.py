@@ -15,7 +15,7 @@ flags = tf.app.flags
 # File directories
 flags.DEFINE_string("model_name", "m05", "Model name. This will be used for save, log, and eval names. [m05]")
 flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
-flags.DEFINE_string("fold_path", "data/s3/fold23.json", "fold json path [data/s3/fold23.json]")
+flags.DEFINE_string("fold_path", "data/s3/folds/fold23.json", "fold json path [data/s3/folds/fold23.json]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for each tower. [100]")
