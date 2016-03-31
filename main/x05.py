@@ -8,7 +8,7 @@ import tensorflow as tf
 
 from configs.get_config import get_config_from_file, get_config
 from models.m05 import Tower, AttentionRunner
-from read_data.r04 import read_data
+from read_data.r05 import read_data
 
 flags = tf.app.flags
 

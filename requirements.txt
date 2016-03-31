@@ -1,5 +1,5 @@
 numpy
 progressbar2
 nltk
-tensorflow==0.7.1
+tensorflow
 h5py

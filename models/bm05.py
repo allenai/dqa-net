@@ -5,7 +5,7 @@ import itertools
 import numpy as np
 import tensorflow as tf
 
-from read_data.r04 import DataSet
+from read_data.r05 import DataSet
 from tf_utils import average_gradients
 from utils import get_pbar
 
