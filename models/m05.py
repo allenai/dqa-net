@@ -56,12 +56,12 @@ class PESentenceEncoder(object):
                 emb_mat = tf.tanh(tf.matmul(emb_mat, mat) + bias)
         self.emb_mat = emb_mat  # [V, d]
 
-
     def __call__(self, sentence, name='u'):
         assert isinstance(sentence, Sentence)
         params = self.params
         d, e = params.hidden_size, params.word_size
         J = sentence.shape[-1]
+
         def f(JJ, jj, dd, kk):
             return (1-float(jj)/JJ) - (float(kk)/dd)*(1-2.0*jj/JJ)
 
@@ -129,7 +129,6 @@ class LSTMSentenceEncoder(object):
 
     def get_last_hidden_state(self, sentence, init_hidden_state=None):
         assert isinstance(sentence, Sentence)
-        params = self.params
         with tf.variable_scope(self.scope, reuse=self.used):
             J = sentence.shape[-1]
             Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
@@ -158,75 +157,15 @@ class Sim(object):
             uf = tf.reduce_sum(u_tiled * f_aug, 3)
         else:
             raise Exception()
-        max_logit = tf.reduce_max(uf, 2)  # [N, C]
-        uf_flat = tf.reshape(uf, [N*C, R])
-        uf_sm_flat = tf.nn.softmax(uf_flat)
-        uf_sm = tf.reshape(uf_sm_flat, [N, C, R])
-        var_logit = tf.reduce_max(uf_sm, 2)
-        if params.max_func == 'max':
-            logit = max_logit
-        elif params.max_func == 'var':
-            logit = var_logit
-        elif params.max_func == 'combined':
-            logit = var_logit * max_logit
+        logit = tf.reduce_max(uf, 2)  # [N, C]
 
         f_mask_aug = tf.expand_dims(memory.m_mask, 1)
         p = nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p')
-        # p = tf.reshape(p_flat, [N, C, R], name='p')
-
         self.logit = logit
         self.p = p
 
 
-class Layer(object):
-    def __init__(self, params, memory, prev_layer=None, sent_encoder=None, u=None):
-        assert isinstance(memory, Memory)
-        self.params = params
-        N, C, R, d = params.batch_size, params.num_choices, params.max_num_facts, params.hidden_size
-
-        with tf.variable_scope("input"):
-            if sent_encoder:
-                # input_encoder = RelationEncoder(params, sent_encoder=sent_encoder)
-                input_encoder = sent_encoder
-            else:
-                # input_encoder = RelationEncoder(params, rel_encoder=prev_layer.output_encoder)
-                input_encoder = LSTMSentenceEncoder(params)
-        with tf.variable_scope("output"):
-            output_encoder = input_encoder  # RelationEncoder(params)
-
-        f = input_encoder(memory, name='f')  # [N, R, d]
-        c = f  # output_encoder(memory)  # [N, R, d]
-        if u is None:
-            u = tf.identity(prev_layer.u + prev_layer.o, name="u")  # [N, C, d]
-
-        with tf.name_scope('p'):
-            f_aug = tf.expand_dims(f, 1)  # [N, 1, R, d]
-            c_aug = tf.expand_dims(c, 1)  # [N, 1, R, d]
-            u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
-            u_tiled = tf.tile(u_aug, [1, 1, R, 1])  # [N, C, R, d]
-            uf = tf.reduce_sum(u_tiled * f_aug, 3, name='uf')  # [N, C, R]
-            f_mask_aug = tf.expand_dims(memory.m_mask, 1)  # [N, 1, R]
-            # f_mask_tiled = tf.tile(f_mask_aug, [1, C, 1])  # [N, C, R]
-            # uf_flat = tf.reshape(uf, [N, C*R])
-            # f_mask_tiled_flat = tf.reshape(f_mask_tiled, [N, C*R])
-            p_flat = nn.softmax_with_mask([N, C, R], uf, f_mask_aug, name='p_flat')  # [N, C, R]
-            p = tf.reshape(p_flat, [N, C, R], name='p')
-            # p_debug = tf.reduce_sum(p, 2)
-
-        with tf.name_scope('o'):
-            c_tiled = tf.tile(c_aug, [1, C, 1, 1])  # [N, C, R, d]
-            o = tf.reduce_sum(c_tiled * tf.expand_dims(p, -1), 2)  # [N, C, d]
-
-        self.f = f
-        self.c = c
-        self.p = p  # [N, C, R]
-        self.u = u
-        self.o = o
-        self.input_encoder = input_encoder
-        self.output_encoder = output_encoder
-
-
-class AttentionTower(BaseTower):
+class Tower(BaseTower):
     def initialize(self):
         params = self.params
         tensors = self.tensors
@@ -242,10 +181,7 @@ class AttentionTower(BaseTower):
             s = Sentence([N, C, J], 's')
             f = Memory(params, 'f')
             image = tf.placeholder('float', [N, G], name='i')
-            if params.use_null:
-                y = tf.placeholder('float', [N, C+1], name='y')
-            else:
-                y = tf.placeholder('int8', [N, C], name='y')
+            y = tf.placeholder('int8', [N, C], name='y')
             init_emb_mat = tf.placeholder('float', shape=[V, e], name='init_emb_mat')
             placeholders['s'] = s
             placeholders['f'] = f
@@ -253,68 +189,21 @@ class AttentionTower(BaseTower):
             placeholders['y'] = y
             placeholders['init_emb_mat'] = init_emb_mat
 
-        with tf.variable_scope('first_u'):
+        with tf.variable_scope('encoder'):
             u_encoder = LSTMSentenceEncoder(params, init_emb_mat)
             # u_encoder = PESentenceEncoder(params, init_emb_mat)
             first_u = u_encoder(s, name='first_u')
-        with tf.variable_scope('first_v'):
-            v_encoder = LSTMSentenceEncoder(params, init_emb_mat)
-            # v_encoder = PESentenceEncoder(params, init_emb_mat)
-            first_v = v_encoder(s, name='first_v')
 
-
-        layers = []
-        prev_layer = None
-        for layer_index in range(params.num_layers):
-            with tf.variable_scope('layer_%d' % layer_index):
-                if prev_layer:
-                    cur_layer = Layer(params, f, prev_layer=prev_layer)
-                else:
-                    cur_layer = Layer(params, f, u=first_u, sent_encoder=u_encoder)
-                layers.append(cur_layer)
-                prev_layer = cur_layer
-        last_layer = layers[-1]
-
-        sim = Sim(params, f, u_encoder, first_u)
-
-        if params.model == 'sim':
-            with tf.variable_scope("sim"):
-                logit = sim.logit
-        elif params.model == 'att':
-            with tf.variable_scope("att"):
-                logit = tf.reduce_sum(first_u * last_layer.o, 2)
-        else:
-            raise Exception()
-
-        with tf.variable_scope("merge"):
-            # raw_gate_aug = nn.linear([N, C], 1, logit) # [N, 1]
-            raw_gate = tf.reduce_sum(logit, 1)
-            raw_gate_aug = tf.expand_dims(raw_gate, -1, name='raw_gate_aug')
-            gate = tf.nn.sigmoid(raw_gate, name='gate')
-            gate_aug = tf.expand_dims(gate, -1, name='gate_aug')
-            gate_avg = tf.reduce_mean(gate, 0, name='gate_avg')
-            sent_logit_aug = nn.linear([N, C, d], 1, first_v, 'sent_logit')
-            sent_logit = tf.squeeze(sent_logit_aug, [2])
-            mem_logit = logit
-            if params.mode == 'l':
-                logit = sent_logit
-            elif params.mode == 'a':
-                logit = mem_logit
-            elif params.mode == 'la':
-                logit = (1 - gate_aug) * mem_logit + gate_aug * sent_logit
-                # self.logit = sig * memory_logit + (1 - sig) * sent_logit
-
-            if params.use_null:
-                logit = tf.concat(1, [logit, raw_gate_aug], name='logit_concat')
+        with tf.variable_scope("sim"):
+            sim = Sim(params, f, u_encoder, first_u)
+            logit = sim.logit
             tensors['logit'] = logit
 
         with tf.variable_scope('yp'):
             yp = tf.nn.softmax(logit, name='yp')  # [N, C]
-            if params.use_null:
-                yp = tf.concat(1, [yp, gate_aug], 'yp_concat')
             tensors['yp'] = yp
 
-        with tf.name_scope('loss') as loss_scope:
+        with tf.name_scope('loss'):
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logit, tf.cast(y, 'float'), name='cross_entropy')
             avg_cross_entropy = tf.reduce_mean(cross_entropy, 0, name='avg_cross_entropy')
             tf.add_to_collection('losses', avg_cross_entropy)

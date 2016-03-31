@@ -21,12 +21,10 @@ class BaseRunner(object):
         self.tensors = {}
         self.saver = None
         self.writer = None
-        self.default_initializer = tf.random_normal_initializer(params.init_mean, params.init_std)
 
     def initialize(self):
         params = self.params
         sess = self.sess
-        moving_average_decay = params.moving_average_decay
         device_type = params.device_type
         summaries = []
 
@@ -44,37 +42,27 @@ class BaseRunner(object):
 
         opt = tf.train.GradientDescentOptimizer(learning_rate)
 
-        """
         grads_tensors = []
         correct_tensors = []
         loss_tensors = []
-        with tf.variable_scope("all", initializer=self.default_initializer):
-            for device_id, tower in enumerate(self.towers):
-                with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("%s_%d" % (device_type, device_id)):
-                    tower.initialize()
-                    tf.get_variable_scope().reuse_variables()
-                    loss_tensor = tower.get_loss_tensor()
-                    loss_tensors.append(loss_tensor)
-                    correct_tensor = tower.get_correct_tensor()
-                    correct_tensors.append(correct_tensor)
-                    grads_tensor = opt.compute_gradients(loss_tensor)
-                    grads_tensors.append(grads_tensor)
+        for device_id, tower in enumerate(self.towers):
+            with tf.device("/%s:%d" % (device_type, device_id)), tf.name_scope("%s_%d" % (device_type, device_id)):
+                tower.initialize()
+                tf.get_variable_scope().reuse_variables()
+                loss_tensor = tower.get_loss_tensor()
+                loss_tensors.append(loss_tensor)
+                correct_tensor = tower.get_correct_tensor()
+                correct_tensors.append(correct_tensor)
+                grads_tensor = opt.compute_gradients(loss_tensor)
+                grads_tensors.append(grads_tensor)
 
         loss_tensor = tf.reduce_mean(tf.pack(loss_tensors), 0, name='loss')
         correct_tensor = tf.concat(0, correct_tensors, name="correct")
         grads_tensor = average_gradients(grads_tensors)
-        """
-        with tf.variable_scope("all", initializer=self.default_initializer), tf.device("/gpu:0"):
-            tower = self.towers[0]
-            tower.initialize()
-            loss_tensor = tower.tensors['avg_cross_entropy']
-            grads_tensor = opt.compute_gradients(tower.get_loss_tensor())
-            correct_tensor = tower.get_correct_tensor()
 
         self.tensors['loss'] = loss_tensor
         self.tensors['correct'] = correct_tensor
 
-        summaries.append(tf.scalar_summary(loss_tensor.op.name, loss_tensor))
         for grad, var in grads_tensor:
             if grad is not None:
                 summaries.append(tf.histogram_summary(var.op.name+'/gradients', grad))
@@ -252,6 +240,7 @@ class BaseTower(object):
         self.params = params
         self.placeholders = {}
         self.tensors = {}
+        self.default_initializer = tf.random_normal_initializer(params.init_mean, params.init_std)
 
     def initialize(self):
         # Actual building
