@@ -56,9 +56,11 @@ class BaseRunner(object):
                 grads_tensor = opt.compute_gradients(loss_tensor)
                 grads_tensors.append(grads_tensor)
 
-        loss_tensor = tf.reduce_mean(tf.pack(loss_tensors), 0, name='loss')
-        correct_tensor = tf.concat(0, correct_tensors, name="correct")
-        grads_tensor = average_gradients(grads_tensors)
+        with tf.name_scope("merge"):
+            loss_tensor = tf.reduce_mean(tf.pack(loss_tensors), 0, name='loss')
+            correct_tensor = tf.concat(0, correct_tensors, name="correct")
+            with tf.name_scope("average_gradients"):
+                grads_tensor = average_gradients(grads_tensors)
 
         self.tensors['loss'] = loss_tensor
         self.tensors['correct'] = correct_tensor
