@@ -108,7 +108,7 @@ class BaseRunner(object):
         train, summary, global_step = sess.run(ops, feed_dict=feed_dict)
         return train, summary, global_step
 
-    def _eval_batches(self, batches, eval_tensors=()):
+    def _eval_batches(self, batches, eval_tensor_names=()):
         sess = self.sess
         tensors = self.tensors
         num_examples = sum(len(batch[0]) for batch in batches)
@@ -117,11 +117,15 @@ class BaseRunner(object):
         correct, loss, summary, global_step = sess.run(ops, feed_dict=feed_dict)
         num_corrects = np.sum(correct[:num_examples])
         # FIXME : these eval tensors need to be names!
-        values = sess.run(eval_tensors, feed_dict=feed_dict) if eval_tensors else []
+        if len(eval_tensor_names) > 0:
+            valuess = [sess.run([tower.tensors[name] for name in eval_tensor_names], feed_dict=feed_dict)
+                       for tower in self.towers]
+        else:
+            valuess = [[]]
 
-        return (num_corrects, loss, summary, global_step), values
+        return (num_corrects, loss, summary, global_step), valuess
 
-    def train(self, train_data_set, val_data_set=None, eval_tensors=()):
+    def train(self, train_data_set, val_data_set=None, eval_tensor_names=()):
         assert isinstance(train_data_set, DataSet)
 
         sess = self.sess
@@ -152,18 +156,17 @@ class BaseRunner(object):
             _, epoch = sess.run([assign_op, epoch_op])
 
             if val_data_set and epoch % params.val_period == 0:
-                self.eval(train_data_set, is_val=True, eval_tensors=eval_tensors)
-                self.eval(val_data_set, is_val=True, eval_tensors=eval_tensors)
+                self.eval(train_data_set, is_val=True, eval_tensor_names=eval_tensor_names)
+                self.eval(val_data_set, is_val=True, eval_tensor_names=eval_tensor_names)
 
             if epoch % params.save_period == 0:
                 self.save()
 
-    def eval(self, data_set, is_val=False, eval_tensors=()):
+    def eval(self, data_set, is_val=False, eval_tensor_names=()):
         assert isinstance(data_set, DataSet)
         params = self.params
         sess = self.sess
         epoch_op = self.tensors['epoch']
-        eval_names = [os.path.basename(tensor.name) for tensor in eval_tensors]
         if is_val:
             num_batches = params.val_num_batches if 0 <= params.val_num_batches <= data_set.num_batches else data_set.num_batches
         else:
@@ -180,11 +183,12 @@ class BaseRunner(object):
         pbar = get_pbar(num_iters, prefix=string).start()
         for iter_idx in range(num_iters):
             batches = [data_set.get_next_labeled_batch() for _ in range(self.num_towers) if data_set.has_next_batch()]
-            (cur_num_corrects, cur_loss, _, global_step), eval_value_batch = \
-                self._eval_batches(batches, eval_tensors=eval_tensors)
+            (cur_num_corrects, cur_loss, _, global_step), eval_value_batches = \
+                self._eval_batches(batches, eval_tensor_names=eval_tensor_names)
             num_corrects += cur_num_corrects
             total += sum(len(batch[0]) for batch in batches)
-            eval_values.append([x.tolist() for x in eval_value_batch])  # numpy.array.toList
+            for eval_value_batch in eval_value_batches:
+                eval_values.append([x.tolist() for x in eval_value_batch])  # numpy.array.toList
             losses.append(cur_loss)
             pbar.update(iter_idx)
         pbar.finish()
@@ -198,7 +202,7 @@ class BaseRunner(object):
         # For outputting eval json files
         ids = [data_set.idx2id[idx] for idx in idxs]
         zipped_eval_values = [list(itertools.chain(*each)) for each in zip(*eval_values)]
-        values = {name: values for name, values in zip(eval_names, zipped_eval_values)}
+        values = {name: values for name, values in zip(eval_tensor_names, zipped_eval_values)}
         out = {'ids': ids, 'values': values}
         eval_path = os.path.join(params.eval_dir, "%s_%s.json" % (data_set.name, str(epoch).zfill(4)))
         json.dump(out, open(eval_path, 'w'))

@@ -197,6 +197,7 @@ class Tower(BaseTower):
         with tf.name_scope("sim"):
             sim = Sim(params, f, u_encoder, first_u)
             logit = sim.logit
+            tensors['p'] = sim.p
             tensors['logit'] = logit
 
         with tf.variable_scope('yp'):

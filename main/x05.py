@@ -160,7 +160,7 @@ def main(_):
 
     pprint(config.__dict__)
 
-    eval_tensors = []  # empty for now, because eval feature is not yet implemented
+    eval_tensors = ['yp', ]  # empty for now, because eval feature is not yet implemented
 
     graph = tf.Graph()
     towers = [Tower(config) for _ in range(config.num_devices)]
@@ -171,7 +171,7 @@ def main(_):
         if config.train:
             if config.load:
                 runner.load()
-            runner.train(train_ds, val_ds, eval_tensors=eval_tensors)
+            runner.train(train_ds, val_ds, eval_tensor_names=eval_tensors)
         else:
             runner.load()
             runner.eval(test_ds, eval_tensors=eval_tensors)
