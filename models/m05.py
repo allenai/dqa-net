@@ -235,8 +235,7 @@ class Tower(BaseTower):
         g = self._prepro_images_batch(images_batch)
         feed_dict = {placeholders['image']: g, placeholders['init_emb_mat']: self.params.init_emb_mat}
         if mode == 'train':
-            null_weight = kwargs['null_weight']
-            y_batch = self._prepro_label_batch(label_batch, null_weight=null_weight)
+            y_batch = self._prepro_label_batch(label_batch)
         elif mode == 'eval':
             y_batch = self._prepro_label_batch(label_batch)
         else:
@@ -292,13 +291,10 @@ class Tower(BaseTower):
                 m_mask_batch[n, m] = 1.0
         return out
 
-    def _prepro_label_batch(self, label_batch, null_weight=0.0):
+    def _prepro_label_batch(self, label_batch):
         p = self.params
         N, C = p.batch_size, p.num_choices
-        if p.use_null:
-            y = np.zeros([N, C+1], dtype='float')
-        else:
-            y = np.zeros([N, C], dtype='float')
+        y = np.zeros([N, C], dtype='float')
         if label_batch is None:
             return y
         for i, label in enumerate(label_batch):
@@ -308,8 +304,6 @@ class Tower(BaseTower):
                 if cur != label:
                     y[i, cur] = np.random.rand() * rand_other
             y[i] = y[i] / sum(y[i])
-            if p.use_null:
-                y[i, C] = null_weight
 
         return y
 
@@ -318,21 +312,14 @@ class AttentionRunner(BaseRunner):
     def _get_train_args(self, epoch_idx):
         params = self.params
         learning_rate = params.init_lr
-        null_weight = params.init_nw
 
         anneal_period = params.anneal_period
         anneal_ratio = params.anneal_ratio
         num_periods = int(epoch_idx / anneal_period)
         factor = anneal_ratio ** num_periods
 
-        if params.use_null:
-            nw_period = params.nw_period
-            nw_ratio = params.nw_ratio
-            nw_num_periods = int(epoch_idx / nw_period)
-            nw_factor = nw_ratio ** nw_num_periods
-            null_weight *= nw_factor
         if params.opt == 'basic':
             learning_rate *= factor
 
-        train_args = {'null_weight': null_weight, 'learning_rate': learning_rate}
+        train_args = {'learning_rate': learning_rate}
         return train_args
