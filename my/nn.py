@@ -40,25 +40,6 @@ def softmax_with_base(shape, base_untiled, x, mask=None, name='sig'):
     return sig, p
 
 
-class DotDiffSim(object):
-    def __init__(self, shape, name='dot_sum'):
-        with tf.variable_scope(name):
-            self.shape = shape
-            d = shape[-1]
-            self.W_prod = tf.get_variable("W_prod", shape=[d, 1])
-            self.W_sum = tf.get_variable("W_sum", shape=[d, 1])
-            self.b = tf.get_variable("b", shape=[1])
-
-    def __call__(self, u, v):
-        N = reduce(mul, self.shape[:-1], 1)
-        d = self.shape[-1]
-        u_flat = tf.reshape(u, [N, d])
-        v_flat = tf.reshape(v, [N, d])
-        logit_flat = tf.matmul(u_flat * v_flat, self.W_prod) + tf.matmul(tf.abs(u_flat - v_flat), self.W_sum) + self.b  # [N*C, 1]
-        logit = tf.reshape(logit_flat, self.shape[:-1])
-        return logit
-
-
 def man_sim(shape, u, v, name='man_sim'):
     """
     Manhattan similarity

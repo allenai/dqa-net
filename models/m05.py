@@ -150,7 +150,7 @@ class Sim(object):
         f_aug = tf.expand_dims(f, 1)  # [N, 1, R, d]
         u_aug = tf.expand_dims(u, 2)  # [N, C, 1, d]
         u_tiled = tf.tile(u_aug, [1, 1, R, 1])
-        if params.sim_func == 'man_dist':
+        if params.sim_func == 'man_sim':
             uf = my.nn.man_sim([N, C, R, d], f_aug, u_tiled, name='uf')  # [N, C, R]
         elif params.sim_func == 'dot':
             uf = tf.reduce_sum(u_tiled * f_aug, 3)
@@ -307,7 +307,7 @@ class Tower(BaseTower):
         return y
 
 
-class AttentionRunner(BaseRunner):
+class Runner(BaseRunner):
     def _get_train_args(self, epoch_idx):
         params = self.params
         learning_rate = params.init_lr

@@ -7,36 +7,25 @@ import h5py
 import tensorflow as tf
 
 from configs.get_config import get_config_from_file, get_config
-from models.m05 import Tower, AttentionRunner
+from models.m05 import Tower, Runner
 from read_data.r05 import read_data
 
 flags = tf.app.flags
 
 # File directories
 flags.DEFINE_string("model_name", "m05", "Model name. This will be used for save, log, and eval names. [m05]")
-flags.DEFINE_string("log_dir", "log", "Log directory [log]")
 flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
 flags.DEFINE_string("fold_path", "data/s3/fold23.json", "fold json path [data/s3/fold23.json]")
 
 # Training parameters
-flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
-flags.DEFINE_integer("hidden_size", 50, "Hidden size [100]")
-flags.DEFINE_integer("image_size", 4096, "Image size [4096]")
-flags.DEFINE_integer("rnn_num_layers", 1, "Number of rnn layers [2]")
-flags.DEFINE_integer("emb_num_layers", 0, "Number of embedding layers [0]")
+flags.DEFINE_integer("batch_size", 100, "Batch size for each tower. [100]")
 flags.DEFINE_float("init_mean", 0, "Initial weight mean [0]")
 flags.DEFINE_float("init_std", 0.1, "Initial weight std [0.1]")
 flags.DEFINE_float("init_lr", 0.1, "Initial learning rate [0.01]")
 flags.DEFINE_integer("anneal_period", 20, "Anneal period [20]")
 flags.DEFINE_float("anneal_ratio", 0.5, "Anneal ratio [0.5")
-flags.DEFINE_integer("num_epochs", 200, "Total number of epochs for training [50]")
-flags.DEFINE_float("keep_prob", 1.0, "Keep probability of dropout [1.0]")
-flags.DEFINE_string("sim_func", 'dot', "Similarity function: man_dist | dot [dot]")
-flags.DEFINE_string("lstm", "basic", "LSTM cell type: regular | basic | GRU [basic]")
-flags.DEFINE_float("forget_bias", 2.5, "LSTM forget bias for basic cell [2.5]")
-flags.DEFINE_float("cell_clip", 40, "LSTM cell clipping for regular cell [40]")
+flags.DEFINE_integer("num_epochs", 200, "Total number of epochs for training [200]")
 flags.DEFINE_string("opt", 'basic', 'Optimizer: basic | adagrad [basic]')
-flags.DEFINE_float("rand_y", 1.0, "Rand y. [1.0]")
 
 # Training and testing options
 flags.DEFINE_boolean("train", False, "Train? Test if False [False]")
@@ -44,12 +33,12 @@ flags.DEFINE_integer("val_num_batches", -1, "Val num batches. -1 for max possibl
 flags.DEFINE_integer("train_num_batches", -1, "Train num batches. -1 for max possible [-1]")
 flags.DEFINE_integer("test_num_batches", -1, "Test num batches. -1 for max possible [-1]")
 flags.DEFINE_boolean("load", False, "Load from saved model? [False]")
-flags.DEFINE_boolean("progress", True, "Show progress? [True]")
+flags.DEFINE_boolean("progress", True, "Show progress bar? [True]")
 flags.DEFINE_string("device_type", 'cpu', "cpu | gpu [cpu]")
-flags.DEFINE_integer("num_devices", 1, "Number of devices to use [1]")
-flags.DEFINE_integer("val_period", 5, "Val period (for display purpose only) [5]")
+flags.DEFINE_integer("num_devices", 1, "Number of devices to use. Only for multi-GPU. [1]")
+flags.DEFINE_integer("val_period", 5, "Validation period (for display purpose only) [5]")
 flags.DEFINE_integer("save_period", 10, "Save period [10]")
-flags.DEFINE_string("config", 'None', "Config file name to load. 'None' to use default config. [None]")
+flags.DEFINE_string("config", 'None', "Config name (e.g. local) to load. 'None' to use config here. [None]")
 flags.DEFINE_string("config_ext", ".json", "Config file extension: .json | .tsv [.json]")
 
 # Debugging
@@ -57,6 +46,16 @@ flags.DEFINE_boolean("draft", False, "Draft? (quick initialize) [False]")
 
 # App-specific training parameters
 # TODO : Any other parameters
+flags.DEFINE_integer("hidden_size", 50, "Hidden size [100]")
+flags.DEFINE_integer("image_size", 4096, "Image size [4096]")
+flags.DEFINE_integer("rnn_num_layers", 1, "Number of rnn layers [2]")
+flags.DEFINE_integer("emb_num_layers", 0, "Number of embedding layers [0]")
+flags.DEFINE_float("keep_prob", 1.0, "Keep probability of dropout [1.0]")
+flags.DEFINE_string("sim_func", 'dot', "Similarity function: man_sim | dot [dot]")
+flags.DEFINE_string("lstm", "basic", "LSTM cell type: regular | basic | GRU [basic]")
+flags.DEFINE_float("forget_bias", 2.5, "LSTM forget bias for basic cell [2.5]")
+flags.DEFINE_float("cell_clip", 40, "LSTM cell clipping for regular cell [40]")
+flags.DEFINE_float("rand_y", 1.0, "Rand y. [1.0]")
 
 # App-specific options
 # TODO : Any other options
@@ -164,7 +163,7 @@ def main(_):
     graph = tf.Graph()
     towers = [Tower(config) for _ in range(config.num_devices)]
     sess = tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True))
-    runner = AttentionRunner(config, sess, towers)
+    runner = Runner(config, sess, towers)
     with graph.as_default(), tf.device("/cpu:0"):
         runner.initialize()
         if config.train:

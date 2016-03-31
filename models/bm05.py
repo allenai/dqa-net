@@ -21,6 +21,7 @@ class BaseRunner(object):
         self.tensors = {}
         self.saver = None
         self.writer = None
+        self.initialized = False
 
     def initialize(self):
         params = self.params
@@ -61,7 +62,7 @@ class BaseRunner(object):
                 grads_tensor = opt.compute_gradients(loss_tensor)
                 grads_tensors.append(grads_tensor)
 
-        with tf.name_scope("merge"):
+        with tf.name_scope("gpu_sync"):
             loss_tensor = tf.reduce_mean(tf.pack(loss_tensors), 0, name='loss')
             correct_tensor = tf.concat(0, correct_tensors, name="correct")
             with tf.name_scope("average_gradients"):
@@ -93,6 +94,7 @@ class BaseRunner(object):
         init_op = tf.initialize_all_variables()
         sess.run(init_op)
         self.writer = tf.train.SummaryWriter(params.log_dir, sess.graph)
+        self.initialized = True
 
     def _get_feed_dict(self, batches, mode, **kwargs):
         placeholders = self.placeholders
@@ -131,6 +133,7 @@ class BaseRunner(object):
 
     def train(self, train_data_set, val_data_set=None, eval_tensor_names=()):
         assert isinstance(train_data_set, DataSet)
+        assert self.initialized, "Initialize tower before training."
 
         sess = self.sess
         writer = self.writer
@@ -168,6 +171,8 @@ class BaseRunner(object):
 
     def eval(self, data_set, is_val=False, eval_tensor_names=()):
         assert isinstance(data_set, DataSet)
+        assert self.initialized, "Initialize tower before training."
+
         params = self.params
         sess = self.sess
         epoch_op = self.tensors['epoch']
@@ -229,6 +234,8 @@ class BaseRunner(object):
         return train_args
 
     def save(self):
+        assert self.initialized, "Initialize tower before saving."
+
         sess = self.sess
         params = self.params
         save_dir = params.save_dir
@@ -240,6 +247,8 @@ class BaseRunner(object):
         print("saving done.")
 
     def load(self):
+        assert self.initialized, "Initialize tower before loading."
+
         sess = self.sess
         params = self.params
         save_dir = params.save_dir
@@ -260,7 +269,7 @@ class BaseTower(object):
     def initialize(self, scope):
         # Actual building
         # Separated so that GPU assignment can be done here.
-        raise Exception("Not implemented!")
+        raise Exception("Implement this!")
 
     def get_correct_tensor(self):
         return self.tensors['correct']
