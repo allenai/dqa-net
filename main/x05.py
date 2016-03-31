@@ -14,7 +14,7 @@ flags = tf.app.flags
 
 # File directories
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
-flags.DEFINE_string("model_name", "m04", "Model name [m04]")
+flags.DEFINE_string("model_name", "m05", "Model name [m05]")
 flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
 flags.DEFINE_string("fold_path", "data/s3/fold6.json", "fold json path [data/s3/fold6.json]")
 
