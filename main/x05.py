@@ -16,21 +16,20 @@ flags = tf.app.flags
 flags.DEFINE_string("log_dir", "log", "Log directory [log]")
 flags.DEFINE_string("model_name", "m05", "Model name [m05]")
 flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
-flags.DEFINE_string("fold_path", "data/s3/fold6.json", "fold json path [data/s3/fold6.json]")
+flags.DEFINE_string("fold_path", "data/s3/fold23.json", "fold json path [data/s3/fold23.json]")
 
 # Training parameters
 flags.DEFINE_integer("batch_size", 100, "Batch size for the network [100]")
-flags.DEFINE_integer("hidden_size", 100, "Hidden size [100]")
+flags.DEFINE_integer("hidden_size", 50, "Hidden size [100]")
 flags.DEFINE_integer("image_size", 4096, "Image size [4096]")
 flags.DEFINE_integer("rnn_num_layers", 1, "Number of rnn layers [2]")
 flags.DEFINE_integer("emb_num_layers", 0, "Number of embedding layers [0]")
 flags.DEFINE_float("init_mean", 0, "Initial weight mean [0]")
 flags.DEFINE_float("init_std", 0.1, "Initial weight std [0.1]")
-flags.DEFINE_float("init_lr", 0.01, "Initial learning rate [0.01]")
+flags.DEFINE_float("init_lr", 0.1, "Initial learning rate [0.01]")
 flags.DEFINE_integer("anneal_period", 20, "Anneal period [20]")
 flags.DEFINE_float("anneal_ratio", 0.5, "Anneal ratio [0.5")
-flags.DEFINE_integer("num_epochs", 50, "Total number of epochs for training [50]")
-flags.DEFINE_float("max_grad_norm", 40, "Max grad norm; above this number is clipped [40]")
+flags.DEFINE_integer("num_epochs", 200, "Total number of epochs for training [50]")
 flags.DEFINE_float("keep_prob", 1.0, "Keep probability of dropout [1.0]")
 flags.DEFINE_string("sim_func", 'dot', "Similarity function: man_dist | dot [dot]")
 flags.DEFINE_string("lstm", "basic", "LSTM cell type: regular | basic | GRU [basic]")
@@ -160,7 +159,7 @@ def main(_):
 
     pprint(config.__dict__)
 
-    eval_tensors = ['yp', ]  # empty for now, because eval feature is not yet implemented
+    eval_tensors = ['yp', 'p']  # empty for now, because eval feature is not yet implemented
 
     graph = tf.Graph()
     towers = [Tower(config) for _ in range(config.num_devices)]

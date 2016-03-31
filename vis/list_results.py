@@ -17,7 +17,7 @@ from utils import get_pbar
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("model_num", type=int)
-    parser.add_argument("config_num", type=int)
+    parser.add_argument("config_name", type=str)
     parser.add_argument("data_type", type=str)
     parser.add_argument("epoch", type=int)
     parser.add_argument("--start", default=0, type=int)
@@ -42,12 +42,13 @@ def _decode_sent(decoder, sent):
 
 def list_results(args):
     model_num = args.model_num
-    config_num = args.config_num
+    config_name = args.config_name
     data_type = args.data_type
     epoch =args.epoch
-    configs = importlib.import_module("configs.c%s" % str(model_num).zfill(2)).configs
-    config = configs[config_num]
-    evals_dir = os.path.join("evals", "m%s" % str(model_num).zfill(2), "c%s" % str(config_num).zfill(2))
+    configs_path = os.path.join("configs", "m%s.json" % str(model_num).zfill(2))
+    configs = json.load(open(configs_path, 'r'))
+    config = configs[config_name]
+    evals_dir = os.path.join("evals", "m%s" % str(model_num).zfill(2), config_name)
     evals_name = "%s_%s.json" % (data_type, str(epoch).zfill(4))
     evals_path = os.path.join(evals_dir, evals_name)
     evals = json.load(open(evals_path, 'r'))
@@ -113,10 +114,10 @@ def list_results(args):
             eval_d = eval_dd[eval_id] if eval_id in eval_dd else None
 
             if eval_d:
-                p_all = zip(*eval_d['p:0'])
+                p_all = zip(*eval_d['p'])
                 p = p_all[:len(decoded_facts)]
                 p = [[float("%.3f" % x) for x in y] for y in p]
-                yp = [float("%.3f" % x) for x in eval_d['yp:0']]
+                yp = [float("%.3f" % x) for x in eval_d['yp']]
             else:
                 p, yp, sig = [], [], []
 

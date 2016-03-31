@@ -182,7 +182,11 @@ class BaseRunner(object):
         string = "eval on %s, N=%d|" % (data_set.name, N)
         pbar = get_pbar(num_iters, prefix=string).start()
         for iter_idx in range(num_iters):
-            batches = [data_set.get_next_labeled_batch() for _ in range(self.num_towers) if data_set.has_next_batch()]
+            batches = []
+            for _ in range(self.num_towers):
+                if data_set.has_next_batch():
+                    idxs.extend(data_set.get_batch_idxs())
+                    batches.append(data_set.get_next_labeled_batch())
             (cur_num_corrects, cur_loss, _, global_step), eval_value_batches = \
                 self._eval_batches(batches, eval_tensor_names=eval_tensor_names)
             num_corrects += cur_num_corrects
