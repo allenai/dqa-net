@@ -55,15 +55,15 @@ def man_sim(shape, u, v, name='man_sim'):
     return sim
 
 
-def linear(shape, output_dim, input_, name="linear"):
-    a = shape[-1]
+def linear(input_shape, output_dim, input_, name="linear"):
+    a = input_shape[-1]
     b = output_dim
-    input_flat = tf.reshape(input_, [reduce(operator.mul, shape[:-1], 1), a])
+    input_flat = tf.reshape(input_, [reduce(operator.mul, input_shape[:-1], 1), a])
     with tf.variable_scope(name):
         mat = tf.get_variable("mat", shape=[a, b])
         bias = tf.get_variable("bias", shape=[b])
         out_flat = tf.matmul(input_flat, mat) + bias
-        out = tf.reshape(out_flat, shape[:-1] + [b])
+        out = tf.reshape(out_flat, input_shape[:-1] + [b])
         return out
 
 

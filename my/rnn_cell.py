@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow.python.ops.rnn_cell import RNNCell
 
 
-def linear(args, output_size, bias, bias_start=0.0, scope=None, var_on_cpu=True):
+def linear(args, output_size, bias, bias_start=0.0, scope=None, var_on_cpu=True, wd=0.0):
     """Linear map: sum_i(args[i] * W[i]), where W[i] is a variable.
 
     Args:
@@ -46,6 +46,10 @@ def linear(args, output_size, bias, bias_start=0.0, scope=None, var_on_cpu=True)
                 matrix = tf.get_variable("Matrix", [total_arg_size, output_size])
         else:
             matrix = tf.get_variable("Matrix", [total_arg_size, output_size])
+        if wd:
+            weight_decay = tf.mul(tf.nn.l2_loss(matrix), wd, name='weight_loss')
+            tf.add_to_collection('losses', weight_decay)
+
 
         if len(args) == 1:
             res = tf.matmul(args[0], matrix)
@@ -80,7 +84,7 @@ class BasicLSTMCell(RNNCell):
     For advanced models, please use the full LSTMCell that follows.
     """
 
-    def __init__(self, num_units, forget_bias=1.0, input_size=None, var_on_cpu=True):
+    def __init__(self, num_units, forget_bias=1.0, input_size=None, var_on_cpu=True, wd=0.0):
         """Initialize the basic LSTM cell.
 
         Args:
@@ -93,6 +97,7 @@ class BasicLSTMCell(RNNCell):
         self._input_size = num_units if input_size is None else input_size
         self._forget_bias = forget_bias
         self.var_on_cpu = var_on_cpu
+        self.wd = wd
 
     @property
     def input_size(self):
@@ -111,7 +116,7 @@ class BasicLSTMCell(RNNCell):
         with tf.variable_scope(name_scope or type(self).__name__):  # "BasicLSTMCell"
             # Parameters of gates are concatenated into one multiply for efficiency.
             c, h = tf.split(1, 2, state)
-            concat = linear([inputs, h], 4 * self._num_units, True, var_on_cpu=self.var_on_cpu)
+            concat = linear([inputs, h], 4 * self._num_units, True, var_on_cpu=self.var_on_cpu, wd=self.wd)
 
             # i = input_gate, j = new_input, f = forget_gate, o = output_gate
             i, j, f, o = tf.split(1, 4, concat)

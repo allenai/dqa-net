@@ -46,7 +46,7 @@ flags.DEFINE_boolean("draft", False, "Draft? (quick initialize) [False]")
 
 # App-specific training parameters
 # TODO : Any other parameters
-flags.DEFINE_integer("hidden_size", 50, "Hidden size [100]")
+flags.DEFINE_integer("hidden_size", 50, "Hidden size [50]")
 flags.DEFINE_integer("image_size", 4096, "Image size [4096]")
 flags.DEFINE_integer("rnn_num_layers", 1, "Number of rnn layers [2]")
 flags.DEFINE_integer("emb_num_layers", 0, "Number of embedding layers [0]")
