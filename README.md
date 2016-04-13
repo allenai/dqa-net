@@ -6,8 +6,7 @@ This is the original source code for DQA-Net described in ["A Diagram is Worth a
 ### 1. Install Requirements
 - Python (verified on 3.5.1)
 - Python packages: numpy, progressbar2, nltk, tensorflow, h5py, [qa2hypo](https://github.com/anglil/qa2hypo)
-- Lua
-- Torch
+- Torch (comes with Lua)
 - Lua packages: cunn, cudnn, cutorch, loadcaffe, hdf5
 
 Note that the most recent official release of tensorflow (0.7.1) probably won't be compatible with this. 
