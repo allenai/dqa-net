@@ -15,15 +15,15 @@ from utils import get_pbar
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("data_dir")
-    parser.add_argument("target_dir")
-    parser.add_argument("glove_path")
+    parser.add_argument("--data_dir", default="~/data/shining3")
+    parser.add_argument("--target_dir", default="data/s3")
+    parser.add_argument("--glove_path", default="~/models/glove/glove.6B.300d.txt")
     parser.add_argument("--min_count", type=int, default=5)
-    parser.add_argument("--vgg_model_path", default="~/caffe-models/vgg-19.caffemodel")
-    parser.add_argument("--vgg_proto_path", default="~/caffe-models/vgg-19.prototxt")
+    parser.add_argument("--vgg_model_path", default="~/models/vgg/vgg-19.caffemodel")
+    parser.add_argument("--vgg_proto_path", default="~/models/vgg/vgg-19.prototxt")
     parser.add_argument("--debug", default='False')
     parser.add_argument("--qa2hypo", default='False')
-    parser.add_argument("--prepro_images", default='False')
+    parser.add_argument("--prepro_images", default='True')
     return parser.parse_args()
 
 

@@ -13,6 +13,7 @@ from read_data.r05 import read_data
 flags = tf.app.flags
 
 # File directories
+# TODO : Make sure these directories are correct!
 flags.DEFINE_string("model_name", "m05", "Model name. This will be used for save, log, and eval names. [m05]")
 flags.DEFINE_string("data_dir", "data/s3", "Data directory [data/s3]")
 flags.DEFINE_string("fold_path", "data/s3/folds/fold23.json", "fold json path [data/s3/folds/fold23.json]")
@@ -45,7 +46,6 @@ flags.DEFINE_string("config_ext", ".json", "Config file extension: .json | .tsv 
 flags.DEFINE_boolean("draft", False, "Draft? (quick initialize) [False]")
 
 # App-specific training parameters
-# TODO : Any other parameters
 flags.DEFINE_integer("hidden_size", 50, "Hidden size [50]")
 flags.DEFINE_integer("image_size", 4096, "Image size [4096]")
 flags.DEFINE_integer("rnn_num_layers", 1, "Number of rnn layers [2]")
@@ -56,9 +56,6 @@ flags.DEFINE_string("lstm", "basic", "LSTM cell type: regular | basic | GRU [bas
 flags.DEFINE_float("forget_bias", 2.5, "LSTM forget bias for basic cell [2.5]")
 flags.DEFINE_float("cell_clip", 40, "LSTM cell clipping for regular cell [40]")
 flags.DEFINE_float("rand_y", 1.0, "Rand y. [1.0]")
-
-# App-specific options
-# TODO : Any other options
 
 FLAGS = flags.FLAGS
 
@@ -152,7 +149,6 @@ def main(_):
         config.num_epochs = 1
         config.val_period = 1
         config.save_period = 1
-        # TODO : Add any other parameter that induces a lot of computations
         config.num_layers = 1
         config.rnn_num_layers = 1
 

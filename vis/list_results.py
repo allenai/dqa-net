@@ -1,8 +1,8 @@
 import importlib
 import shutil
 
-import SimpleHTTPServer
-import SocketServer
+import http.server
+import socketserver
 import argparse
 import json
 import os
@@ -79,7 +79,7 @@ def list_results(args):
     facts_dict = json.load(open(facts_path, "r"))
     vocab = json.load(open(vocab_path, "r"))
     answers_dict = json.load(open(answers_path, "r"))
-    decoder = {idx: word for word, idx in vocab.items()}
+    decoder = {idx: word for word, idx in list(vocab.items())}
 
     if os.path.exists(html_dir):
         shutil.rmtree(html_dir)
@@ -94,7 +94,7 @@ def list_results(args):
     eval_dd = {}
     for idx, id_ in enumerate(evals['ids']):
         eval_d = {}
-        for name, d in evals['values'].items():
+        for name, d in list(evals['values'].items()):
             eval_d[name] = d[idx]
         eval_dd[tuple(id_)] = eval_d
 
@@ -114,7 +114,7 @@ def list_results(args):
             eval_d = eval_dd[eval_id] if eval_id in eval_dd else None
 
             if eval_d:
-                p_all = zip(*eval_d['p'])
+                p_all = list(zip(*eval_d['p']))
                 p = p_all[:len(decoded_facts)]
                 p = [[float("%.3f" % x) for x in y] for y in p]
                 yp = [float("%.3f" % x) for x in eval_d['yp']]
@@ -163,14 +163,14 @@ def list_results(args):
     port = args.port
     host = args.host
     # Overriding to suppress log message
-    class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+    class MyHandler(http.server.SimpleHTTPRequestHandler):
         def log_message(self, format, *args):
             pass
     handler = MyHandler
-    httpd = SocketServer.TCPServer((host, port), handler)
+    httpd = socketserver.TCPServer((host, port), handler)
     if args.open == 'True':
         os.system("open http://%s:%d" % (args.host, args.port))
-    print("serving at %s:%d" % (host, port))
+    print(("serving at %s:%d" % (host, port)))
     httpd.serve_forever()
 
 
