@@ -440,6 +440,9 @@ def create_meta_data(args):
 
 
 def create_image_ids_and_paths(args):
+    if args.prepro_images == 'False':
+        print("Skipping image preprocessing.")
+        return
     data_dir = args.data_dir
     target_dir = args.target_dir
     images_dir = os.path.join(data_dir, "images")
