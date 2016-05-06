@@ -31,6 +31,7 @@ def qa2hypo(question, answer, flag):
     if flag == 'True':
         from qa2hypo import qa2hypo as f
         return f(question, answer, False, True)
+    # attach the answer to the question
     return "%s %s" % (question, answer)
 
 
