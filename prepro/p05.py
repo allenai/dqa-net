@@ -4,6 +4,7 @@ import json
 import shutil
 from collections import defaultdict, namedtuple
 import re
+import sys
 import random
 from pprint import pprint
 
@@ -15,9 +16,9 @@ from utils import get_pbar
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", default="~/data/shining3")
+    parser.add_argument("--data_dir", default="/home/anglil/data/dqa/shining3")
     parser.add_argument("--target_dir", default="data/s3")
-    parser.add_argument("--glove_path", default="~/models/glove/glove.6B.300d.txt")
+    parser.add_argument("--glove_path", default="/home/anglil/models/glove/glove.6B.300d.txt")
     parser.add_argument("--min_count", type=int, default=5)
     parser.add_argument("--vgg_model_path", default="~/models/vgg/vgg-19.caffemodel")
     parser.add_argument("--vgg_proto_path", default="~/models/vgg/vgg-19.prototxt")
@@ -30,9 +31,9 @@ def get_args():
 
 def qa2hypo(question, answer, flag, qa2hypo_path):
     if flag == 'True':
-        import sys
         # add qa2hypo_path to the Python path at runtime
         sys.path.insert(0, qa2hypo_path)
+        sys.path.insert(0, qa2hypo_path+'/stanford-corenlp-python')
         from qa2hypo import qa2hypo as f
         return f(question, answer, False, True)
     # attach the answer to the question
