@@ -193,10 +193,19 @@ class Tower(BaseTower):
             # u_encoder = PESentenceEncoder(params, init_emb_mat)
             first_u = u_encoder(s, name='first_u')
 
-        with tf.name_scope("sim"):
+        with tf.name_scope("main"):
             sim = Sim(params, f, u_encoder, first_u)
-            logit = sim.logit
             tensors['p'] = sim.p
+            if params.mode == 'dqanet':
+                logit = sim.logit
+            elif params.mode == 'vqa':
+                image_trans_mat = tf.get_variable('I', shape=[G, d])
+                image_trans_bias = tf.get_variable('bI', shape=[])
+                g = tf.tanh(tf.matmul(image, image_trans_mat) + image_trans_bias, name='g')  # [N, d]
+                aug_g = tf.expand_dims(g, 2, name='aug_g')  # [N, d, 1]
+                logit = tf.squeeze(tf.batch_matmul(first_u, aug_g), [2])  # [N, C]
+            else:
+                raise Exception("Invalid mode: {}".format(params.mode))
             tensors['logit'] = logit
 
         with tf.variable_scope('yp'):

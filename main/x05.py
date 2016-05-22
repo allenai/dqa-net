@@ -56,6 +56,7 @@ flags.DEFINE_string("lstm", "basic", "LSTM cell type: regular | basic | GRU [bas
 flags.DEFINE_float("forget_bias", 2.5, "LSTM forget bias for basic cell [2.5]")
 flags.DEFINE_float("cell_clip", 40, "LSTM cell clipping for regular cell [40]")
 flags.DEFINE_float("rand_y", 1.0, "Rand y. [1.0]")
+flags.DEFINE_string("mode", "dqanet", "dqanet | vqa [dqanet]")
 
 FLAGS = flags.FLAGS
 
