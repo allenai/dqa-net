@@ -3,12 +3,12 @@ from operator import mul
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.models.rnn import rnn_cell
 from tensorflow.python.ops import rnn
 
 from models.bm05 import BaseTower, BaseRunner
 import my.rnn_cell
 import my.nn
+
 
 
 class Sentence(object):
@@ -117,17 +117,17 @@ class LSTMSentenceEncoder(object):
             self.first_cell = my.rnn_cell.BasicLSTMCell(d, input_size=self.input_size, forget_bias=params.forget_bias)
             self.second_cell = my.rnn_cell.BasicLSTMCell(d, forget_bias=params.forget_bias)
         elif params.lstm == 'regular':
-            self.first_cell = rnn_cell.LSTMCell(d, self.input_size, cell_clip=params.cell_clip)
-            self.second_cell = rnn_cell.LSTMCell(d, d, cell_clip=params.cell_clip)
+            self.first_cell = tf.nn.rnn_cell.LSTMCell(d, self.input_size, cell_clip=params.cell_clip)
+            self.second_cell = tf.nn.rnn_cell.LSTMCell(d, d, cell_clip=params.cell_clip)
         elif params.lstm == 'gru':
-            self.first_cell = rnn_cell.GRUCell(d, input_size=self.input_size)
-            self.second_cell = rnn_cell.GRUCell(d)
+            self.first_cell = tf.nn.rnn_cell.GRUCell(d, input_size=self.input_size)
+            self.second_cell = tf.nn.rnn_cell.GRUCell(d)
         else:
             raise Exception()
 
         if params.train and params.keep_prob < 1.0:
             self.first_cell = tf.nn.rnn_cell.DropoutWrapper(self.first_cell, input_keep_prob=params.keep_prob, output_keep_prob=params.keep_prob)
-        self.cell = rnn_cell.MultiRNNCell([self.first_cell] + [self.second_cell] * (L-1))
+        self.cell = tf.nn.rnn_cell.MultiRNNCell([self.first_cell] + [self.second_cell] * (L-1))
         self.scope = tf.get_variable_scope()
         self.used = False
 
