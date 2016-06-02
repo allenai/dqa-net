@@ -66,7 +66,6 @@
     "keep_prob": 1.0,
     "lstm": "basic",
     "max_grad_norm": 40,
-    "mode": "la",
     "model": "sim",
     "num_devices": null,
     "num_epochs": 2,

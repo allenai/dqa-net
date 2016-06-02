@@ -78,6 +78,25 @@ class PESentenceEncoder(object):
         return m
 
 
+class MeanEncoder(object):
+    def __init__(self, params, emb_mat):
+        self.params = params
+        V, d, L, e = params.vocab_size, params.hidden_size, params.rnn_num_layers, params.word_size
+        prev_size = e
+        hidden_sizes = [d for _ in range(params.emb_num_layers)]
+        for layer_idx in range(params.emb_num_layers):
+            with tf.variable_scope("emb_%d" % layer_idx):
+                cur_hidden_size = hidden_sizes[layer_idx]
+                emb_mat = tf.tanh(my.nn.linear([V, prev_size], cur_hidden_size, emb_mat))
+                prev_size = cur_hidden_size
+        self.emb_mat = emb_mat
+
+    def __call__(self, sentence, name='mean'):
+        assert isinstance(sentence, Sentence)
+        Ax = tf.nn.embedding_lookup(self.emb_mat, sentence.x)  # [N, C, J, e]
+        return tf.reduce_mean(Ax * sentence.x_mask_aug, len(sentence.shape)-1, name=name)
+
+
 class LSTMSentenceEncoder(object):
     def __init__(self, params, emb_mat):
         self.params = params
@@ -189,7 +208,12 @@ class Tower(BaseTower):
             placeholders['init_emb_mat'] = init_emb_mat
 
         with tf.variable_scope('encoder'):
-            u_encoder = LSTMSentenceEncoder(params, init_emb_mat)
+            if params.encoder == 'lstm':
+                u_encoder = LSTMSentenceEncoder(params, init_emb_mat)
+            elif params.encoder == 'mean':
+                u_encoder = MeanEncoder(params, init_emb_mat)
+            else:
+                raise Exception("Invalid encoder: {}".format(params.encoder))
             # u_encoder = PESentenceEncoder(params, init_emb_mat)
             first_u = u_encoder(s, name='first_u')
 
